@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stadt Heidelberg — Haushaltsdaten 2017–2029</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+:root {
+  --sap-blue: #2F5496;
+  --sap-blue-dark: #1F3864;
+  --subheader: #D9E1F2;
+  --neg: #C00000;
+  --pos: #2E7D32;
+  --bg: #FFFFFF;
+  --bg-soft: #F7F8FA;
+  --muted: #6B7280;
+  --border: #E5E7EB;
+  --text: #1F2937;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px; line-height: 1.5;
+  color: var(--text); background: var(--bg-soft);
+}
+header.app-header {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--sap-blue); color: white;
+  padding: 0.75rem 1.5rem;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+header.app-header h1 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+header.app-header .meta { font-size: 0.85rem; opacity: 0.9; display: flex; gap: 1.5rem; align-items: center; }
+header.app-header label { cursor: pointer; user-select: none; }
+header.app-header input[type=checkbox] { margin-right: 0.3rem; vertical-align: middle; }
+
+.layout { display: flex; min-height: calc(100vh - 50px); }
+
+nav.sidebar {
+  width: 240px; flex-shrink: 0;
+  background: white; border-right: 1px solid var(--border);
+  padding: 1rem 0;
+  position: sticky; top: 50px; height: calc(100vh - 50px);
+  overflow-y: auto;
+}
+nav.sidebar a {
+  display: block;
+  padding: 0.6rem 1.2rem;
+  color: var(--text); text-decoration: none;
+  border-left: 3px solid transparent;
+  font-size: 0.92rem;
+}
+nav.sidebar a:hover { background: var(--bg-soft); }
+nav.sidebar a.active { background: var(--subheader); border-left-color: var(--sap-blue); color: var(--sap-blue-dark); font-weight: 600; }
+nav.sidebar .nav-section { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding: 1rem 1.2rem 0.3rem; }
+
+main {
+  flex: 1; padding: 2rem 2.5rem;
+  max-width: 1400px;
+}
+
+section.view { display: none; animation: fadeIn 0.2s ease-in; }
+section.view.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+.section-pill {
+  display: inline-block;
+  background: var(--sap-blue); color: white;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  font-size: 0.85rem; font-weight: 600;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.02em;
+}
+section.view h2 {
+  font-size: 1.6rem; margin: 0.5rem 0 0.5rem;
+  color: var(--sap-blue-dark);
+  border-bottom: 3px solid var(--sap-blue);
+  padding-bottom: 0.5rem;
+}
+section.view .descr { color: var(--muted); margin-bottom: 1.5rem; }
+
+/* Dashboard cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+.card {
+  background: white; border-radius: 8px;
+  padding: 1.25rem; box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  border-top: 4px solid var(--sap-blue);
+}
+.card .kpi { font-size: 1.9rem; font-weight: 700; color: var(--sap-blue-dark); margin: 0.3rem 0; }
+.card .kpi.neg { color: var(--neg); }
+.card h3 { margin: 0; font-size: 0.95rem; color: var(--muted); font-weight: 500; }
+.card p { margin: 0.6rem 0 0; font-size: 0.88rem; line-height: 1.4; }
+
+/* Chart panels */
+.chart-panel {
+  background: white; border-radius: 8px;
+  padding: 1.25rem; margin-bottom: 1.5rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.chart-panel h3 { margin: 0 0 1rem; font-size: 1rem; color: var(--sap-blue-dark); }
+.chart-container { position: relative; height: 320px; }
+.chart-container.tall { height: 450px; }
+
+/* Table panel */
+.table-panel {
+  background: white; border-radius: 8px;
+  padding: 1.25rem; margin-bottom: 1.5rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.table-panel h3 { margin: 0 0 1rem; font-size: 1rem; color: var(--sap-blue-dark); }
+.filters { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; align-items: center; }
+.filters label { font-size: 0.85rem; color: var(--muted); }
+.filters select, .filters input {
+  padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: 4px;
+  font-size: 0.9rem; background: white;
+}
+.filters input { min-width: 200px; }
+
+.tbl-wrap { overflow-x: auto; }
+table.data {
+  width: 100%; border-collapse: collapse; font-size: 0.88rem;
+}
+table.data th, table.data td {
+  padding: 0.55rem 0.8rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+table.data th {
+  background: var(--subheader); color: var(--sap-blue-dark);
+  font-weight: 600; cursor: pointer; user-select: none;
+  position: sticky; top: 0;
+  white-space: nowrap;
+}
+table.data th:hover { background: #C8D5EC; }
+table.data th .arr { color: var(--sap-blue); margin-left: 0.3rem; }
+table.data tr:nth-child(even) td { background: #FAFBFC; }
+table.data tr:hover td { background: #EEF2F8; }
+table.data td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.data td.neg { color: var(--neg); font-weight: 600; }
+table.data td.muted { color: var(--muted); font-size: 0.82rem; }
+
+.pagination { display: flex; justify-content: center; gap: 0.4rem; margin-top: 1rem; align-items: center; font-size: 0.85rem; }
+.pagination button {
+  border: 1px solid var(--border); background: white;
+  padding: 0.3rem 0.7rem; border-radius: 4px; cursor: pointer;
+  font-size: 0.85rem;
+}
+.pagination button:hover:not(:disabled) { background: var(--bg-soft); }
+.pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+.pagination .info { color: var(--muted); margin: 0 0.5rem; }
+
+/* Accordion (mapping) */
+.accordion-item {
+  background: white; border-radius: 6px; margin-bottom: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+.accordion-head {
+  padding: 0.7rem 1rem; cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--subheader); font-weight: 600;
+  border-left: 4px solid var(--sap-blue);
+}
+.accordion-head:hover { background: #C8D5EC; }
+.accordion-head .chevron { transition: transform 0.2s; }
+.accordion-item.open .chevron { transform: rotate(90deg); }
+.accordion-body { display: none; padding: 0.5rem 1rem 1rem; }
+.accordion-item.open .accordion-body { display: block; }
+
+/* Key-value list (README) */
+.kv-list { background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+.kv-list .kv-row { display: grid; grid-template-columns: 200px 1fr; gap: 1rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); }
+.kv-list .kv-row:last-child { border-bottom: none; }
+.kv-list .kv-label { font-weight: 600; color: var(--sap-blue-dark); }
+.kv-list .kv-row.heading { background: var(--subheader); padding: 0.6rem 0.8rem; border-radius: 4px; grid-template-columns: 1fr; font-weight: 700; color: var(--sap-blue-dark); margin: 0.8rem 0 0.4rem; border-bottom: none; }
+.kv-list .kv-row.heading .kv-label { color: var(--sap-blue-dark); }
+
+/* Warning banner */
+.banner {
+  background: #FFF4E5; border-left: 4px solid #F59E0B;
+  padding: 0.8rem 1rem; border-radius: 4px;
+  margin-bottom: 1.25rem; font-size: 0.9rem;
+}
+.banner strong { color: #92400E; }
+
+footer.app-footer {
+  background: white; padding: 1.5rem 2.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem; color: var(--muted);
+  margin-left: 240px;
+}
+footer.app-footer p { margin: 0.3rem 0; }
+
+@media (max-width: 900px) {
+  nav.sidebar { display: none; }
+  main { padding: 1.5rem 1rem; }
+  footer.app-footer { margin-left: 0; }
+  header.app-header { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+  header.app-header .meta { font-size: 0.8rem; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>🏛️ Stadt Heidelberg — Haushaltsdaten 2017–2029</h1>
+  <div class="meta">
+    <span>Stand: <strong id="generated-date">2026-06-28 21:35</strong></span>
+    <label><input type="checkbox" id="th-fw-toggle"> TH FW einblenden</label>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <a href="#dashboard" class="nav-link active" data-target="dashboard">🏠 Hauptsicht</a>
+    <div class="nav-section">Sheets</div>
+    <!-- nav links injected -->
+  </nav>
+
+  <main id="main">
+    <!-- Dashboard -->
+    <section class="view active" id="dashboard">
+      <span class="section-pill">Hauptsicht</span>
+      <h2>Drei Kernaussagen aus Stufe 1</h2>
+      <p class="descr">Datenfundierte Beobachtungen aus den Haushaltsplänen 2019/20 bis Nachtrag 2026. Klick links auf einzelne Sheets für Details.</p>
+
+      <div class="cards">
+        <div class="card">
+          <h3>1. Defizit ist strukturell</h3>
+          <div class="kpi neg" id="kpi-defizit-2025">–</div>
+          <p>Mittelfristplan 2027–2029 zeigt anhaltend –49 bis –52 Mio. €. Auch nach Nachtrag bleibt das Problem.</p>
+        </div>
+        <div class="card">
+          <h3>2. Hebel konzentriert</h3>
+          <div class="kpi">TH 51 · 20 · 50</div>
+          <p>Drei Teilhaushalte verursachen 60 % des Defizits. TH 20 und 50 sind rechtlich gebunden — Hebel liegt außerhalb Top-3 oder gezielt in TH 51 (Jugendamt).</p>
+        </div>
+        <div class="card">
+          <h3>3. Schulden steigen schneller als Defizit</h3>
+          <div class="kpi neg" id="kpi-schulden-2029">–</div>
+          <p>+413 Mio. € geplanter Schuldenaufbau bis 2029. Kombination aus Defizit- und Investitionsfinanzierung über Kredit ist der Treiber.</p>
+        </div>
+      </div>
+
+      <div class="chart-panel">
+        <h3>Ordentliches Ergebnis 2017–2029 (Mio. €)</h3>
+        <div class="chart-container"><canvas id="chart-defizit"></canvas></div>
+      </div>
+
+      <div class="chart-panel">
+        <h3>Schuldenstand Kernhaushalt 2018–2029 (Mio. €)</h3>
+        <div class="chart-container"><canvas id="chart-schulden"></canvas></div>
+      </div>
+
+      <div class="chart-panel">
+        <h3>Top-10 Teilhaushalte nach Defizit 2025 (Mio. €) — TH FW ausgeblendet</h3>
+        <div class="chart-container tall"><canvas id="chart-th-top10"></canvas></div>
+      </div>
+    </section>
+
+    <!-- Sheet sections (injected by JS) -->
+    <section class="view" id="view-00_README"></section>
+    <section class="view" id="view-01_Eckdaten"></section>
+    <section class="view" id="view-02_Teilhaushalte"></section>
+    <section class="view" id="view-08_Schulden_Liquiditaet"></section>
+    <section class="view" id="view-09_Kennzahlen"></section>
+    <section class="view" id="view-13_Mapping_TH_PB"></section>
+    <section class="view" id="view-14_Stammdaten_TH"></section>
+  </main>
+</div>
+
+<footer class="app-footer">
+  <p><strong>Datenbasis:</strong> <code>Daten\01_HD_Haushaltsdaten.xlsx</code> (Stufe 1 MVP, 7 von 15 Sheets befüllt).</p>
+  <p><strong>Quellen:</strong> Q1 = Haushaltsplan 2019/20 · Q2 = 2021/22 · Q3 = 2023/24 · Q4 = 2025/26 (Hauptquelle) · Q5 = Nachtragshaushalt 2026.</p>
+  <p><strong>Konvention:</strong> Negative Werte rot. TH FW (Allgemeine Finanzwirtschaft) bei TH-Rankings standardmäßig ausgeblendet — zentrale Steuer-/Umlagenposition verzerrt sonst das Bild.</p>
+  <p><strong>Regenerieren:</strong> <code>python WebApp/build_webapp.py</code></p>
+</footer>
+
+<script>
+// ===========================================================================
+// DATA
+// ===========================================================================
+const DATA = {"generated": "2026-06-28 21:35", "sheets": {"00_README": {"type": "kv", "pairs": [{"label": "HD Haushaltsdaten 2017–2029 — Excel-Datenbasis (Stufe 1)", "value": ""}, {"label": "Stand", "value": "2026-06-28"}, {"label": "Quellen", "value": "Q1 (2019/20) + Q2 (2021/22) + Q3 (2023/24) + Q4 (2025/26) + Q5 (Nachtrag 2026) + Q6 (Leitantrag) + Q7 (Screenshot)"}, {"label": "Detail-Index", "value": "siehe Daten\\00_Quellen-Index.md"}, {"label": "Sheet", "value": "Inhalt / Status"}, {"label": "01_Eckdaten", "value": "Jahresreihe 2017–2029: Erträge, Aufwendungen, Ergebnis, Schulden — BEFÜLLT"}, {"label": "02_Teilhaushalte", "value": "TH-Übersichten 2025/26 (Erträge/Aufwendungen/Ergebnis pro TH) — BEFÜLLT für 2025+2026; Jahresreihe 2019-2024 = Lücke"}, {"label": "03_Produktbereiche", "value": "SKELETON — Stufe 2"}, {"label": "04_Produktgruppen", "value": "SKELETON — Stufe 2"}, {"label": "05_Produkte", "value": "SKELETON — Stufe 3 (Maximal-Tiefe)"}, {"label": "06_Investitionen", "value": "SKELETON — Stufe 2; Volumendaten in 01_Eckdaten enthalten"}, {"label": "07_Personal", "value": "SKELETON — Stufe 2 (Stellenpläne)"}, {"label": "08_Schulden_Liquiditaet", "value": "Schuldenstand-Reihe + Kassenkredite + Tilgungen — BEFÜLLT (Hauptdaten)"}, {"label": "09_Kennzahlen", "value": "Finanzielle Leistungsfähigkeit — TEILWEISE (Tabellen-Rotation in PDFs verhindert vollständige Extraktion)"}, {"label": "10_Eigenbetriebe", "value": "SKELETON — Stufe 2 (Theater, ESB etc.)"}, {"label": "11_Vergleichsstaedte", "value": "SKELETON — Befüllung später, nach Vorgabe Mathieu"}, {"label": "12_Hebel_Hypothesen", "value": "SKELETON — wird im Termin-Vorbereitungsprozess befüllt"}, {"label": "13_Mapping_TH_PB", "value": "TH↔Produktbereich-Zuordnung — BEFÜLLT (Stand 2025/26)"}, {"label": "14_Stammdaten_TH", "value": "TH-Stammdaten + Brüche im Jahresvergleich — BEFÜLLT"}, {"label": "Konventionen", "value": ""}, {"label": "Einheit", "value": "Wenn nicht anders angegeben: Mio. €. TH-Übersichten in EUR (Spalte 'Einheit' beachten)."}, {"label": "Quellenangabe", "value": "Spalten 'Quelle_PDF' (Q1-Q5) und 'Quelle_Seite' (PDF-Seite)"}, {"label": "Long-Format", "value": "Sheets als Long-Format (Jahr × Kennzahl × Wert) ausgelegt → Pivot-fähig"}, {"label": "Negative Werte", "value": "rot formatiert (Defizit, Verschuldung)"}, {"label": "Lücken", "value": "siehe 03_Transparenzluecken.md im Daten-Ordner"}, {"label": "Nächste Schritte", "value": ""}, {"label": "→", "value": "Stufe 2: TH-Übersichten 2019–2024 nachziehen, Produktbereiche, Investitionen-Detail, Personal"}, {"label": "→", "value": "Stufe 3: Produktgruppen + Produkt-Ebene (Maximal-Tiefe)"}, {"label": "→", "value": "11_Vergleichsstaedte: Daten von Karlsruhe, Mannheim, Freiburg etc. ergänzen"}], "label": "00 · README", "icon": "📖"}, "01_Eckdaten": {"type": "table", "headers": ["Jahr", "Plan_Typ", "Kennzahl", "Wert", "Einheit", "Quelle_Datei", "Quelle_PDF", "Quelle_Seite", "Hinweis"], "rows": [[2017, "Ist", "Ordentliches Ergebnis", -7.7, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2017, "Ist", "Schuldenstand 31.12.", 188.9, "Mio. €", "Haushalt 19/20", "Q1", 15, "Kernhaushalt"], [2018, "Plan", "Ordentliches Ergebnis", -7.7, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2018, "Plan", "Auszahlungen Investitionen", 78.5, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2018, "Plan", "Schuldenstand 31.12.", 188.9, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2019, "Plan", "Ordentliches Ergebnis", 10.9, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2019, "Plan", "Zahlungsmittelüberschuss Ergebnis", 60.2, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2019, "Plan", "Auszahlungen Investitionen", 99.7, "Mio. €", "Haushalt 19/20", "Q1", 15, "Brutto"], [2019, "Plan", "Einzahlungen Investitionen", 14.8, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2019, "Plan", "Schuldenstand 31.12.", 206.8, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2019, "Plan", "Kreditneuaufnahmen", 25.8, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2019, "Plan", "Neuverschuldung (Netto)", 17.9, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2020, "Plan", "Ordentliches Ergebnis", -10.9, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2020, "Plan", "Zahlungsmittelüberschuss Ergebnis", 39.6, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2020, "Plan", "Auszahlungen Investitionen", 108.9, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2020, "Plan", "Einzahlungen Investitionen", 14.2, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2020, "Plan", "Schuldenstand 31.12.", 226.9, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2020, "Plan", "Kreditneuaufnahmen", 28.5, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2020, "Plan", "Neuverschuldung (Netto)", 20.1, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2020, "Plan", "Einsatz Kassenbestand", 37.5, "Mio. €", "Haushalt 19/20", "Q1", 15, null], [2021, "Plan", "Ordentliches Ergebnis", -49.3, "Mio. €", "Haushalt 21/22", "Q2", 14, null], [2021, "Plan", "Zahlungsmittelüberschuss/-bedarf", -0.1, "Mio. €", "Haushalt 21/22", "Q2", 14, null], [2021, "Plan", "Auszahlungen Investitionen", 100.8, "Mio. €", "Haushalt 21/22", "Q2", 14, null], [2021, "Plan", "Einzahlungen Investitionen", 19.4, "Mio. €", "Haushalt 21/22", "Q2", 14, null], [2021, "Plan", "Schuldenstand 31.12.", 268.8, "Mio. €", "Haushalt 21/22", "Q2", 14, null], [2021, "Plan", "Kreditneuaufnahmen", 108.3, "Mio. €", "Haushalt 21/22", "Q2", 14, null], [2021, "Plan", "Neuverschuldung (Netto)", 42.8, "Mio. €", "Haushalt 21/22", "Q2", 14, null], [2021, "Plan", "Kassenbestand Jahresende", 13.1, "Mio. €", "Haushalt 21/22", "Q2", 14, null], [2022, "Ist", "Ordentliches Ergebnis", 4.3, "Mio. €", "Haushalt 23/24", "Q3", 15, null], [2022, "Ist", "Zahlungsmittelüberschuss Ergebnis", 82.6, "Mio. €", "Haushalt 23/24", "Q3", 15, null], [2022, "Ist", "Auszahlungen Investitionen", 108.6, "Mio. €", "Haushalt 23/24", "Q3", 15, null], [2022, "Ist", "Einzahlungen Investitionen", 17.1, "Mio. €", "Haushalt 23/24", "Q3", 15, null], [2022, "Ist", "Schuldenstand 31.12.", 209.3, "Mio. €", "Haushalt 23/24", "Q3", 15, null], [2022, "Ist", "Kreditneuaufnahmen", 0, "Mio. €", "Haushalt 23/24", "Q3", 15, null], [2022, "Ist", "Neuverschuldung (Netto)", -8.4, "Mio. €", "Haushalt 23/24", "Q3", 15, "Tilgung > Aufnahme"], [2023, "Plan", "Ordentliches Ergebnis", -13, "Mio. €", "Haushalt 23/24", "Q3", 15, null], [2023, "Plan", "Zahlungsmittelüberschuss/-bedarf", 17.4, "Mio. €", "Haushalt 23/24", "Q3", 15, null], [2023, "Plan", "Auszahlungen Investitionen", 94, "Mio. €", "Haushalt 23/24", "Q3", 15, null], [2023, "Plan", "Einzahlungen Investitionen", 19.7, "Mio. €", "Haushalt 23/24", "Q3", 15, null], [2023, "Plan", "Schuldenstand 31.12.", 259.3, "Mio. €", "Haushalt 23/24", "Q3", 15, null], [2023, "Plan", "Kreditneuaufnahmen", 59.1, "Mio. €", "Haushalt 23/24", "Q3", 15, null], [2023, "Plan", "Neuverschuldung (Netto)", 50, "Mio. €", "Haushalt 23/24", "Q3", 15, null], [2024, "Plan", "Ordentliches Ergebnis", -23.7, "Mio. €", "Haushalt 25/26", "Q4", 14, "Plan 2024 in Q4 als Vorjahresplan"], [2024, "Plan", "Zahlungsmittelüberschuss/-bedarf", -14, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2024, "Plan", "Auszahlungen Investitionen", 118, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2024, "Plan", "Einzahlungen Investitionen", 20.8, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2024, "Plan", "Schuldenstand 31.12.", 331.5, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2024, "Plan", "Kreditneuaufnahmen", 82.9, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2024, "Plan", "Neuverschuldung (Netto)", 72.2, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2024, "Plan", "Einsatz Kassenbestand", 42, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2025, "Plan (Beitritt)", "Ordentliche Erträge", 808.9, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2025, "Plan (Beitritt)", "Ordentliche Aufwendungen", 907.8, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2025, "Plan (Beitritt)", "Ordentliches Ergebnis", -98.9, "Mio. €", "Haushalt 25/26", "Q4", 14, "RP-Verfügung 08.08.2025 → Beitritt 08.10.2025"], [2025, "Plan (Beitritt)", "Gesamtergebnis", -98.9, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2025, "Plan (Beitritt)", "Zahlungsmittelüberschuss/-bedarf Ergebnis", -40.3, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2025, "Plan (Beitritt)", "Zahlungsmittelüberschuss/-bedarf Gesamt", -120.9, "Mio. €", "Haushalt 25/26", "Q4", 14, "Inkl. Investitionen"], [2025, "Plan (Beitritt)", "Auszahlungen Investitionen", 102, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2025, "Plan (Beitritt)", "Einzahlungen Investitionen", 21.4, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2025, "Plan (Beitritt)", "Schuldenstand 31.12.", 401.4, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2025, "Plan (Beitritt)", "Kreditneuaufnahmen", 86.2, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2025, "Plan (Beitritt)", "Neuverschuldung (Netto)", 75.1, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2025, "Plan (Beitritt)", "Kassenkredite Höchstbetrag", 175, "Mio. €", "Haushalt 25/26", "Q4", 0, "Satzung"], [2025, "Plan (Beitritt)", "Verpflichtungsermächtigungen", 0, "Mio. €", "Haushalt 25/26", "Q4", 0, "RP nicht genehmigt"], [2026, "Plan (Beitritt)", "Ordentliche Erträge", 843.3, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2026, "Plan (Beitritt)", "Ordentliche Aufwendungen", 925.9, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2026, "Plan (Beitritt)", "Ordentliches Ergebnis", -82.7, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2026, "Plan (Beitritt)", "Zahlungsmittelüberschuss/-bedarf Ergebnis", -28.9, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2026, "Plan (Beitritt)", "Auszahlungen Investitionen", 89.4, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2026, "Plan (Beitritt)", "Einzahlungen Investitionen", 17, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2026, "Plan (Beitritt)", "Schuldenstand 31.12.", 467.4, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2026, "Plan (Beitritt)", "Kreditneuaufnahmen", 77.9, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2026, "Plan (Beitritt)", "Neuverschuldung (Netto)", 66.1, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2026, "Plan (Beitritt)", "Kassenkredite Höchstbetrag", 175, "Mio. €", "Haushalt 25/26", "Q4", 0, "Satzung"], [2026, "Plan (Beitritt)", "Verpflichtungsermächtigungen", 0, "Mio. €", "Haushalt 25/26", "Q4", 0, "RP nicht genehmigt"], [2026, "Nachtrag", "Ordentliche Erträge", 868.5, "Mio. €", "Nachtrag 26", "Q5", 12, "Nachtrag 1. NHHS"], [2026, "Nachtrag", "Ordentliche Aufwendungen", 909.1, "Mio. €", "Nachtrag 26", "Q5", 12, null], [2026, "Nachtrag", "Ordentliches Ergebnis", -40.6, "Mio. €", "Nachtrag 26", "Q5", 12, "verbessert von -82,7 → -40,6 (+42 Mio. €)"], [2026, "Nachtrag", "Zahlungsmittelüberschuss/-bedarf Ergebnis", 11.2, "Mio. €", "Nachtrag 26", "Q5", 12, "Vorher -28,9 — Überschuss erreicht"], [2026, "Nachtrag", "Auszahlungen Investitionen", 86.3, "Mio. €", "Nachtrag 26", "Q5", 12, null], [2026, "Nachtrag", "Einzahlungen Investitionen", 18.7, "Mio. €", "Nachtrag 26", "Q5", 12, null], [2026, "Nachtrag", "Schuldenstand 31.12.", 383.1, "Mio. €", "Nachtrag 26", "Q5", 12, "stat. 467,4 → 383,1"], [2026, "Nachtrag", "Kreditermächtigung neu", 177.2, "Mio. €", "Nachtrag 26", "Q5", 12, null], [2026, "Nachtrag", "Verpflichtungsermächtigungen", 18.5, "Mio. €", "Nachtrag 26", "Q5", 12, null], [2026, "Nachtrag", "Kassenkredite Bestand 01.01.2026", 65, "Mio. €", "Nachtrag 26", "Q5", 12, null], [2026, "Nachtrag", "Tilgung aus Ergebnishaushalt", 11.2, "Mio. €", "Nachtrag 26", "Q5", 12, null], [2027, "MiFri", "Ordentliches Ergebnis", -49.2, "Mio. €", "Haushalt 25/26", "Q4", 14, "Mittelfristplanung"], [2027, "MiFri", "Zahlungsmittelüberschuss/-bedarf Ergebnis", -14.5, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2027, "MiFri", "Auszahlungen Investitionen", 71.1, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2027, "MiFri", "Schuldenstand 31.12.", 520.4, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2027, "MiFri", "Kreditneuaufnahmen", 65.5, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2028, "MiFri", "Ordentliches Ergebnis", -50.6, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2028, "MiFri", "Zahlungsmittelüberschuss/-bedarf Ergebnis", -7.8, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2028, "MiFri", "Auszahlungen Investitionen", 61, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2028, "MiFri", "Schuldenstand 31.12.", 564.6, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2028, "MiFri", "Kreditneuaufnahmen", 57.4, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2029, "MiFri", "Ordentliches Ergebnis", -52.3, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2029, "MiFri", "Zahlungsmittelüberschuss/-bedarf Ergebnis", 5.7, "Mio. €", "Haushalt 25/26", "Q4", 14, "Erste positive Zahl im Finanzplanungszeitraum"], [2029, "MiFri", "Auszahlungen Investitionen", 56.5, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2029, "MiFri", "Schuldenstand 31.12.", 601.9, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2029, "MiFri", "Kreditneuaufnahmen", 51.2, "Mio. €", "Haushalt 25/26", "Q4", 14, null]], "label": "01 · Eckdaten", "icon": "📊"}, "02_Teilhaushalte": {"type": "table", "headers": ["Jahr", "Plan_Typ", "TH_Code", "TH_Bezeichnung", "Kennzahl", "Wert", "Einheit", "Quelle_Datei", "Quelle_PDF", "Quelle_Seite", "Hinweis"], "rows": [[2025, "Plan (Beitritt)", "01", "Referat des Oberbürgermeisters", "Ord_Ertraege", 215000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "01", "Referat des Oberbürgermeisters", "Personalaufwendungen", 8265400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "01", "Referat des Oberbürgermeisters", "Sach_Dienstleistungen", 882400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "01", "Referat des Oberbürgermeisters", "Transferaufwendungen", 810148, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "01", "Referat des Oberbürgermeisters", "Sonstige_Aufwendungen", 1883800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "01", "Referat des Oberbürgermeisters", "Ord_Aufwendungen_Gesamt", 11841748, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "01", "Referat des Oberbürgermeisters", "Ord_Ergebnis", -11626748, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "01", "Referat des Oberbürgermeisters", "Ord_Ertraege", 215000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "01", "Referat des Oberbürgermeisters", "Personalaufwendungen", 8466700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "01", "Referat des Oberbürgermeisters", "Sach_Dienstleistungen", 706000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "01", "Referat des Oberbürgermeisters", "Transferaufwendungen", 840785, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "01", "Referat des Oberbürgermeisters", "Sonstige_Aufwendungen", 1888600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "01", "Referat des Oberbürgermeisters", "Ord_Aufwendungen_Gesamt", 11902085, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "01", "Referat des Oberbürgermeisters", "Ord_Ergebnis", -11687085, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "11", "Personal- und Organisationsamt", "Ord_Ertraege", 1381400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "11", "Personal- und Organisationsamt", "Personalaufwendungen", 17449400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "11", "Personal- und Organisationsamt", "Sach_Dienstleistungen", 3169100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "11", "Personal- und Organisationsamt", "Transferaufwendungen", 103000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "11", "Personal- und Organisationsamt", "Sonstige_Aufwendungen", 823610, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "11", "Personal- und Organisationsamt", "Ord_Aufwendungen_Gesamt", 21545110, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "11", "Personal- und Organisationsamt", "Ord_Ergebnis", -20163710, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "11", "Personal- und Organisationsamt", "Ord_Ertraege", 1551400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "11", "Personal- und Organisationsamt", "Personalaufwendungen", 20576100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "11", "Personal- und Organisationsamt", "Sach_Dienstleistungen", 2833500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "11", "Personal- und Organisationsamt", "Transferaufwendungen", 105500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "11", "Personal- und Organisationsamt", "Sonstige_Aufwendungen", 816210, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "11", "Personal- und Organisationsamt", "Ord_Aufwendungen_Gesamt", 24331310, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "11", "Personal- und Organisationsamt", "Ord_Ergebnis", -22779910, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "12", "Amt für Stadtentwicklung und Statistik", "Ord_Ertraege", 1023700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "12", "Amt für Stadtentwicklung und Statistik", "Personalaufwendungen", 2437800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "12", "Amt für Stadtentwicklung und Statistik", "Sach_Dienstleistungen", 1857000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "12", "Amt für Stadtentwicklung und Statistik", "Transferaufwendungen", 789100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "12", "Amt für Stadtentwicklung und Statistik", "Sonstige_Aufwendungen", 104400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "12", "Amt für Stadtentwicklung und Statistik", "Ord_Aufwendungen_Gesamt", 5188300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "12", "Amt für Stadtentwicklung und Statistik", "Ord_Ergebnis", -4164600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "12", "Amt für Stadtentwicklung und Statistik", "Ord_Ertraege", 61000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "12", "Amt für Stadtentwicklung und Statistik", "Personalaufwendungen", 2579000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "12", "Amt für Stadtentwicklung und Statistik", "Sach_Dienstleistungen", 965750, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "12", "Amt für Stadtentwicklung und Statistik", "Transferaufwendungen", 815100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "12", "Amt für Stadtentwicklung und Statistik", "Sonstige_Aufwendungen", 97200, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "12", "Amt für Stadtentwicklung und Statistik", "Ord_Aufwendungen_Gesamt", 4457050, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "12", "Amt für Stadtentwicklung und Statistik", "Ord_Ergebnis", -4396050, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "KW", "Kultur- und Kreativwirtschaft", "Ord_Ertraege", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "KW", "Kultur- und Kreativwirtschaft", "Personalaufwendungen", 243400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "KW", "Kultur- und Kreativwirtschaft", "Sach_Dienstleistungen", 120000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "KW", "Kultur- und Kreativwirtschaft", "Transferaufwendungen", 65000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "KW", "Kultur- und Kreativwirtschaft", "Sonstige_Aufwendungen", 8800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "KW", "Kultur- und Kreativwirtschaft", "Ord_Aufwendungen_Gesamt", 437200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "KW", "Kultur- und Kreativwirtschaft", "Ord_Ergebnis", -437200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "KW", "Kultur- und Kreativwirtschaft", "Ord_Ertraege", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "KW", "Kultur- und Kreativwirtschaft", "Personalaufwendungen", 239000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "KW", "Kultur- und Kreativwirtschaft", "Sach_Dienstleistungen", 120000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "KW", "Kultur- und Kreativwirtschaft", "Transferaufwendungen", 50000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "KW", "Kultur- und Kreativwirtschaft", "Sonstige_Aufwendungen", 10500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "KW", "Kultur- und Kreativwirtschaft", "Ord_Aufwendungen_Gesamt", 419500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "KW", "Kultur- und Kreativwirtschaft", "Ord_Ergebnis", -419500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "13", "Amt für Öffentlichkeitsarbeit", "Ord_Ertraege", 10200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "13", "Amt für Öffentlichkeitsarbeit", "Personalaufwendungen", 1430800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "13", "Amt für Öffentlichkeitsarbeit", "Sach_Dienstleistungen", 550800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "13", "Amt für Öffentlichkeitsarbeit", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "13", "Amt für Öffentlichkeitsarbeit", "Sonstige_Aufwendungen", 29800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "13", "Amt für Öffentlichkeitsarbeit", "Ord_Aufwendungen_Gesamt", 2011400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "13", "Amt für Öffentlichkeitsarbeit", "Ord_Ergebnis", -2001200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "13", "Amt für Öffentlichkeitsarbeit", "Ord_Ertraege", 10200, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "13", "Amt für Öffentlichkeitsarbeit", "Personalaufwendungen", 1399400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "13", "Amt für Öffentlichkeitsarbeit", "Sach_Dienstleistungen", 550800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "13", "Amt für Öffentlichkeitsarbeit", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "13", "Amt für Öffentlichkeitsarbeit", "Sonstige_Aufwendungen", 29700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "13", "Amt für Öffentlichkeitsarbeit", "Ord_Aufwendungen_Gesamt", 1979900, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "13", "Amt für Öffentlichkeitsarbeit", "Ord_Ergebnis", -1969700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "14", "Rechnungsprüfungsamt", "Ord_Ertraege", 91600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "14", "Rechnungsprüfungsamt", "Personalaufwendungen", 1587200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "14", "Rechnungsprüfungsamt", "Sach_Dienstleistungen", 75400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "14", "Rechnungsprüfungsamt", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "14", "Rechnungsprüfungsamt", "Sonstige_Aufwendungen", 19900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "14", "Rechnungsprüfungsamt", "Ord_Aufwendungen_Gesamt", 1682500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "14", "Rechnungsprüfungsamt", "Ord_Ergebnis", -1590900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "14", "Rechnungsprüfungsamt", "Ord_Ertraege", 91600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "14", "Rechnungsprüfungsamt", "Personalaufwendungen", 1624700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "14", "Rechnungsprüfungsamt", "Sach_Dienstleistungen", 75400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "14", "Rechnungsprüfungsamt", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "14", "Rechnungsprüfungsamt", "Sonstige_Aufwendungen", 18400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "14", "Rechnungsprüfungsamt", "Ord_Aufwendungen_Gesamt", 1718500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "14", "Rechnungsprüfungsamt", "Ord_Ergebnis", -1626900, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "15", "Bürger- und Ordnungsamt", "Ord_Ertraege", 6712700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "15", "Bürger- und Ordnungsamt", "Personalaufwendungen", 14763100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "15", "Bürger- und Ordnungsamt", "Sach_Dienstleistungen", 4012100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "15", "Bürger- und Ordnungsamt", "Transferaufwendungen", 223000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "15", "Bürger- und Ordnungsamt", "Sonstige_Aufwendungen", 863600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "15", "Bürger- und Ordnungsamt", "Ord_Aufwendungen_Gesamt", 19861800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "15", "Bürger- und Ordnungsamt", "Ord_Ergebnis", -13149100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "15", "Bürger- und Ordnungsamt", "Ord_Ertraege", 7271200, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "15", "Bürger- und Ordnungsamt", "Personalaufwendungen", 15195800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "15", "Bürger- und Ordnungsamt", "Sach_Dienstleistungen", 3884400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "15", "Bürger- und Ordnungsamt", "Transferaufwendungen", 223000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "15", "Bürger- und Ordnungsamt", "Sonstige_Aufwendungen", 834500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "15", "Bürger- und Ordnungsamt", "Ord_Aufwendungen_Gesamt", 20137700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "15", "Bürger- und Ordnungsamt", "Ord_Ergebnis", -12866500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "16", "Amt für Chancengleichheit", "Ord_Ertraege", 763800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "16", "Amt für Chancengleichheit", "Personalaufwendungen", 1370500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "16", "Amt für Chancengleichheit", "Sach_Dienstleistungen", 235100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "16", "Amt für Chancengleichheit", "Transferaufwendungen", 3203237, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "16", "Amt für Chancengleichheit", "Sonstige_Aufwendungen", 285200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "16", "Amt für Chancengleichheit", "Ord_Aufwendungen_Gesamt", 5094037, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "16", "Amt für Chancengleichheit", "Ord_Ergebnis", -4330237, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "16", "Amt für Chancengleichheit", "Ord_Ertraege", 618800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "16", "Amt für Chancengleichheit", "Personalaufwendungen", 1478100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "16", "Amt für Chancengleichheit", "Sach_Dienstleistungen", 235100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "16", "Amt für Chancengleichheit", "Transferaufwendungen", 2922672, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "16", "Amt für Chancengleichheit", "Sonstige_Aufwendungen", 284800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "16", "Amt für Chancengleichheit", "Ord_Aufwendungen_Gesamt", 4920672, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "16", "Amt für Chancengleichheit", "Ord_Ergebnis", -4301872, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "IZ", "Interkulturelles Zentrum", "Ord_Ertraege", 1100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "IZ", "Interkulturelles Zentrum", "Personalaufwendungen", 360900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "IZ", "Interkulturelles Zentrum", "Sach_Dienstleistungen", 281300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "IZ", "Interkulturelles Zentrum", "Transferaufwendungen", 50000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "IZ", "Interkulturelles Zentrum", "Sonstige_Aufwendungen", 24500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "IZ", "Interkulturelles Zentrum", "Ord_Aufwendungen_Gesamt", 716700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "IZ", "Interkulturelles Zentrum", "Ord_Ergebnis", -715600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "IZ", "Interkulturelles Zentrum", "Ord_Ertraege", 14000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "IZ", "Interkulturelles Zentrum", "Personalaufwendungen", 370000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "IZ", "Interkulturelles Zentrum", "Sach_Dienstleistungen", 282300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "IZ", "Interkulturelles Zentrum", "Transferaufwendungen", 50000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "IZ", "Interkulturelles Zentrum", "Sonstige_Aufwendungen", 21300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "IZ", "Interkulturelles Zentrum", "Ord_Aufwendungen_Gesamt", 723600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "IZ", "Interkulturelles Zentrum", "Ord_Ergebnis", -709600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "17", "Amt für Digitales/Informationsverarbeitung", "Ord_Ertraege", 724900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "17", "Amt für Digitales/Informationsverarbeitung", "Personalaufwendungen", 5760000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "17", "Amt für Digitales/Informationsverarbeitung", "Sach_Dienstleistungen", 2213700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "17", "Amt für Digitales/Informationsverarbeitung", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "17", "Amt für Digitales/Informationsverarbeitung", "Sonstige_Aufwendungen", 3535500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "17", "Amt für Digitales/Informationsverarbeitung", "Ord_Aufwendungen_Gesamt", 11509200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "17", "Amt für Digitales/Informationsverarbeitung", "Ord_Ergebnis", -10784300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "17", "Amt für Digitales/Informationsverarbeitung", "Ord_Ertraege", 728900, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "17", "Amt für Digitales/Informationsverarbeitung", "Personalaufwendungen", 6498800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "17", "Amt für Digitales/Informationsverarbeitung", "Sach_Dienstleistungen", 2254200, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "17", "Amt für Digitales/Informationsverarbeitung", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "17", "Amt für Digitales/Informationsverarbeitung", "Sonstige_Aufwendungen", 4250700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "17", "Amt für Digitales/Informationsverarbeitung", "Ord_Aufwendungen_Gesamt", 13003700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "17", "Amt für Digitales/Informationsverarbeitung", "Ord_Ergebnis", -12274800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "20", "Kämmereiamt", "Ord_Ertraege", 20450500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "20", "Kämmereiamt", "Personalaufwendungen", 7917600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "20", "Kämmereiamt", "Sach_Dienstleistungen", 1540600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "20", "Kämmereiamt", "Transferaufwendungen", 79567300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "20", "Kämmereiamt", "Sonstige_Aufwendungen", 15502300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "20", "Kämmereiamt", "Ord_Aufwendungen_Gesamt", 104527800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "20", "Kämmereiamt", "Ord_Ergebnis", -84077300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "20", "Kämmereiamt", "Ord_Ertraege", 20451500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "20", "Kämmereiamt", "Personalaufwendungen", 8153600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "20", "Kämmereiamt", "Sach_Dienstleistungen", 1212600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "20", "Kämmereiamt", "Transferaufwendungen", 79488230, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "20", "Kämmereiamt", "Sonstige_Aufwendungen", 15634600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "20", "Kämmereiamt", "Ord_Aufwendungen_Gesamt", 104489030, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "20", "Kämmereiamt", "Ord_Ergebnis", -84037530, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "23", "Amt für Liegenschaften", "Ord_Ertraege", 9504100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "23", "Amt für Liegenschaften", "Personalaufwendungen", 2273000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "23", "Amt für Liegenschaften", "Sach_Dienstleistungen", 7193400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "23", "Amt für Liegenschaften", "Transferaufwendungen", 103000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "23", "Amt für Liegenschaften", "Sonstige_Aufwendungen", 3063200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "23", "Amt für Liegenschaften", "Ord_Aufwendungen_Gesamt", 12632600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "23", "Amt für Liegenschaften", "Ord_Ergebnis", -3128500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "23", "Amt für Liegenschaften", "Ord_Ertraege", 9704300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "23", "Amt für Liegenschaften", "Personalaufwendungen", 2349100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "23", "Amt für Liegenschaften", "Sach_Dienstleistungen", 6457900, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "23", "Amt für Liegenschaften", "Transferaufwendungen", 103000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "23", "Amt für Liegenschaften", "Sonstige_Aufwendungen", 3048300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "23", "Amt für Liegenschaften", "Ord_Aufwendungen_Gesamt", 11958300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "23", "Amt für Liegenschaften", "Ord_Ergebnis", -2254000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "SW", "Team Wohnen und aktive Bodenpolitik", "Ord_Ertraege", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "SW", "Team Wohnen und aktive Bodenpolitik", "Personalaufwendungen", 343700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "SW", "Team Wohnen und aktive Bodenpolitik", "Sach_Dienstleistungen", 27200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "SW", "Team Wohnen und aktive Bodenpolitik", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "SW", "Team Wohnen und aktive Bodenpolitik", "Sonstige_Aufwendungen", 22300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "SW", "Team Wohnen und aktive Bodenpolitik", "Ord_Aufwendungen_Gesamt", 393200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "SW", "Team Wohnen und aktive Bodenpolitik", "Ord_Ergebnis", -393200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "SW", "Team Wohnen und aktive Bodenpolitik", "Ord_Ertraege", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "SW", "Team Wohnen und aktive Bodenpolitik", "Personalaufwendungen", 352300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "SW", "Team Wohnen und aktive Bodenpolitik", "Sach_Dienstleistungen", 27200, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "SW", "Team Wohnen und aktive Bodenpolitik", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "SW", "Team Wohnen und aktive Bodenpolitik", "Sonstige_Aufwendungen", 22300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "SW", "Team Wohnen und aktive Bodenpolitik", "Ord_Aufwendungen_Gesamt", 401800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "SW", "Team Wohnen und aktive Bodenpolitik", "Ord_Ergebnis", -401800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "KV", "Stabsstelle Konversion", "Ord_Ertraege", 15000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "KV", "Stabsstelle Konversion", "Personalaufwendungen", 481700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "KV", "Stabsstelle Konversion", "Sach_Dienstleistungen", 322000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "KV", "Stabsstelle Konversion", "Transferaufwendungen", 70000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "KV", "Stabsstelle Konversion", "Sonstige_Aufwendungen", 1122700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "KV", "Stabsstelle Konversion", "Ord_Aufwendungen_Gesamt", 1996400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "KV", "Stabsstelle Konversion", "Ord_Ergebnis", -1981400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "KV", "Stabsstelle Konversion", "Ord_Ertraege", 15000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "KV", "Stabsstelle Konversion", "Personalaufwendungen", 493700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "KV", "Stabsstelle Konversion", "Sach_Dienstleistungen", 322000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "KV", "Stabsstelle Konversion", "Transferaufwendungen", 70000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "KV", "Stabsstelle Konversion", "Sonstige_Aufwendungen", 1122800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "KV", "Stabsstelle Konversion", "Ord_Aufwendungen_Gesamt", 2008500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "KV", "Stabsstelle Konversion", "Ord_Ergebnis", -1993500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "30", "Rechtsamt", "Ord_Ertraege", 3384300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "30", "Rechtsamt", "Personalaufwendungen", 3412100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "30", "Rechtsamt", "Sach_Dienstleistungen", 418500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "30", "Rechtsamt", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "30", "Rechtsamt", "Sonstige_Aufwendungen", 861400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "30", "Rechtsamt", "Ord_Aufwendungen_Gesamt", 4692000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "30", "Rechtsamt", "Ord_Ergebnis", -1307700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "30", "Rechtsamt", "Ord_Ertraege", 3417000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "30", "Rechtsamt", "Personalaufwendungen", 3555900, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "30", "Rechtsamt", "Sach_Dienstleistungen", 455400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "30", "Rechtsamt", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "30", "Rechtsamt", "Sonstige_Aufwendungen", 949700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "30", "Rechtsamt", "Ord_Aufwendungen_Gesamt", 4961000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "30", "Rechtsamt", "Ord_Ergebnis", -1544000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Ord_Ertraege", 669300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Personalaufwendungen", 5355900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Sach_Dienstleistungen", 1569100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Transferaufwendungen", 319200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Sonstige_Aufwendungen", 353700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Ord_Aufwendungen_Gesamt", 7597900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Ord_Ergebnis", -6928600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Ord_Ertraege", 650800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Personalaufwendungen", 5611400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Sach_Dienstleistungen", 1533600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Transferaufwendungen", 299200, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Sonstige_Aufwendungen", 451200, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Ord_Aufwendungen_Gesamt", 7895400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Ord_Ergebnis", -7244600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "34", "Standesamt", "Ord_Ertraege", 702000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "34", "Standesamt", "Personalaufwendungen", 1915600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "34", "Standesamt", "Sach_Dienstleistungen", 102500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "34", "Standesamt", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "34", "Standesamt", "Sonstige_Aufwendungen", 120000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "34", "Standesamt", "Ord_Aufwendungen_Gesamt", 2138100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "34", "Standesamt", "Ord_Ergebnis", -1436100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "34", "Standesamt", "Ord_Ertraege", 702000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "34", "Standesamt", "Personalaufwendungen", 1947800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "34", "Standesamt", "Sach_Dienstleistungen", 102300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "34", "Standesamt", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "34", "Standesamt", "Sonstige_Aufwendungen", 123700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "34", "Standesamt", "Ord_Aufwendungen_Gesamt", 2173800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "34", "Standesamt", "Ord_Ergebnis", -1471800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "37", "Feuerwehr", "Ord_Ertraege", 2569100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "37", "Feuerwehr", "Personalaufwendungen", 13524500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "37", "Feuerwehr", "Sach_Dienstleistungen", 2390500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "37", "Feuerwehr", "Transferaufwendungen", 65000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "37", "Feuerwehr", "Sonstige_Aufwendungen", 2448300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "37", "Feuerwehr", "Ord_Aufwendungen_Gesamt", 18428300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "37", "Feuerwehr", "Ord_Ergebnis", -15859200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "37", "Feuerwehr", "Ord_Ertraege", 2704400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "37", "Feuerwehr", "Personalaufwendungen", 13848000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "37", "Feuerwehr", "Sach_Dienstleistungen", 2650200, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "37", "Feuerwehr", "Transferaufwendungen", 65000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "37", "Feuerwehr", "Sonstige_Aufwendungen", 2810500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "37", "Feuerwehr", "Ord_Aufwendungen_Gesamt", 19373700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "37", "Feuerwehr", "Ord_Ergebnis", -16669300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "40", "Amt für Schule und Bildung", "Ord_Ertraege", 31537100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "40", "Amt für Schule und Bildung", "Personalaufwendungen", 8326800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "40", "Amt für Schule und Bildung", "Sach_Dienstleistungen", 39578300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "40", "Amt für Schule und Bildung", "Transferaufwendungen", 2791247, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "40", "Amt für Schule und Bildung", "Sonstige_Aufwendungen", 14086600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "40", "Amt für Schule und Bildung", "Ord_Aufwendungen_Gesamt", 64782947, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "40", "Amt für Schule und Bildung", "Ord_Ergebnis", -33245847, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "40", "Amt für Schule und Bildung", "Ord_Ertraege", 31799500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "40", "Amt für Schule und Bildung", "Personalaufwendungen", 8753100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "40", "Amt für Schule und Bildung", "Sach_Dienstleistungen", 39860900, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "40", "Amt für Schule und Bildung", "Transferaufwendungen", 2442247, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "40", "Amt für Schule und Bildung", "Sonstige_Aufwendungen", 14256200, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "40", "Amt für Schule und Bildung", "Ord_Aufwendungen_Gesamt", 65312447, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "40", "Amt für Schule und Bildung", "Ord_Ergebnis", -33512947, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "41", "Kulturamt", "Ord_Ertraege", 3700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "41", "Kulturamt", "Personalaufwendungen", 1028700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "41", "Kulturamt", "Sach_Dienstleistungen", 543000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "41", "Kulturamt", "Transferaufwendungen", 6182067, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "41", "Kulturamt", "Sonstige_Aufwendungen", -163354, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "41", "Kulturamt", "Ord_Aufwendungen_Gesamt", 7590413, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "41", "Kulturamt", "Ord_Ergebnis", -7586713, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "41", "Kulturamt", "Ord_Ertraege", 3700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "41", "Kulturamt", "Personalaufwendungen", 1035100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "41", "Kulturamt", "Sach_Dienstleistungen", 569900, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "41", "Kulturamt", "Transferaufwendungen", 6114357, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "41", "Kulturamt", "Sonstige_Aufwendungen", -161444, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "41", "Kulturamt", "Ord_Aufwendungen_Gesamt", 7557913, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "41", "Kulturamt", "Ord_Ergebnis", -7554213, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "LT", "Stabsstelle feeLit", "Ord_Ertraege", 154800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "LT", "Stabsstelle feeLit", "Personalaufwendungen", 223600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "LT", "Stabsstelle feeLit", "Sach_Dienstleistungen", 231200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "LT", "Stabsstelle feeLit", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "LT", "Stabsstelle feeLit", "Sonstige_Aufwendungen", 17700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "LT", "Stabsstelle feeLit", "Ord_Aufwendungen_Gesamt", 472500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "LT", "Stabsstelle feeLit", "Ord_Ergebnis", -317700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "LT", "Stabsstelle feeLit", "Ord_Ertraege", 154800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "LT", "Stabsstelle feeLit", "Personalaufwendungen", 229700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "LT", "Stabsstelle feeLit", "Sach_Dienstleistungen", 231200, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "LT", "Stabsstelle feeLit", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "LT", "Stabsstelle feeLit", "Sonstige_Aufwendungen", -132100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "LT", "Stabsstelle feeLit", "Ord_Aufwendungen_Gesamt", 328800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "LT", "Stabsstelle feeLit", "Ord_Ergebnis", -174000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "42", "Kurpfälzisches Museum", "Ord_Ertraege", 424900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "42", "Kurpfälzisches Museum", "Personalaufwendungen", 2891500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "42", "Kurpfälzisches Museum", "Sach_Dienstleistungen", 1466100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "42", "Kurpfälzisches Museum", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "42", "Kurpfälzisches Museum", "Sonstige_Aufwendungen", 753400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "42", "Kurpfälzisches Museum", "Ord_Aufwendungen_Gesamt", 5111000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "42", "Kurpfälzisches Museum", "Ord_Ergebnis", -4686100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "42", "Kurpfälzisches Museum", "Ord_Ertraege", 452600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "42", "Kurpfälzisches Museum", "Personalaufwendungen", 2983100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "42", "Kurpfälzisches Museum", "Sach_Dienstleistungen", 1292100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "42", "Kurpfälzisches Museum", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "42", "Kurpfälzisches Museum", "Sonstige_Aufwendungen", 763800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "42", "Kurpfälzisches Museum", "Ord_Aufwendungen_Gesamt", 5039000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "42", "Kurpfälzisches Museum", "Ord_Ergebnis", -4586400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "45", "Stadtbücherei", "Ord_Ertraege", 532000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "45", "Stadtbücherei", "Personalaufwendungen", 3064500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "45", "Stadtbücherei", "Sach_Dienstleistungen", 951900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "45", "Stadtbücherei", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "45", "Stadtbücherei", "Sonstige_Aufwendungen", 270800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "45", "Stadtbücherei", "Ord_Aufwendungen_Gesamt", 4287200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "45", "Stadtbücherei", "Ord_Ergebnis", -3755200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "45", "Stadtbücherei", "Ord_Ertraege", 542800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "45", "Stadtbücherei", "Personalaufwendungen", 3146500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "45", "Stadtbücherei", "Sach_Dienstleistungen", 973000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "45", "Stadtbücherei", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "45", "Stadtbücherei", "Sonstige_Aufwendungen", 275500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "45", "Stadtbücherei", "Ord_Aufwendungen_Gesamt", 4395000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "45", "Stadtbücherei", "Ord_Ergebnis", -3852200, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "46", "Musik- und Singschule", "Ord_Ertraege", 2379600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "46", "Musik- und Singschule", "Personalaufwendungen", 5060300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "46", "Musik- und Singschule", "Sach_Dienstleistungen", 947000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "46", "Musik- und Singschule", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "46", "Musik- und Singschule", "Sonstige_Aufwendungen", 131700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "46", "Musik- und Singschule", "Ord_Aufwendungen_Gesamt", 6139000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "46", "Musik- und Singschule", "Ord_Ergebnis", -3759400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "46", "Musik- und Singschule", "Ord_Ertraege", 2409600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "46", "Musik- und Singschule", "Personalaufwendungen", 5188300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "46", "Musik- und Singschule", "Sach_Dienstleistungen", 735500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "46", "Musik- und Singschule", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "46", "Musik- und Singschule", "Sonstige_Aufwendungen", 131200, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "46", "Musik- und Singschule", "Ord_Aufwendungen_Gesamt", 6055000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "46", "Musik- und Singschule", "Ord_Ergebnis", -3645400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "47", "Stadtarchiv", "Ord_Ertraege", 21400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "47", "Stadtarchiv", "Personalaufwendungen", 903900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "47", "Stadtarchiv", "Sach_Dienstleistungen", 225200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "47", "Stadtarchiv", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "47", "Stadtarchiv", "Sonstige_Aufwendungen", 89300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "47", "Stadtarchiv", "Ord_Aufwendungen_Gesamt", 1218400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "47", "Stadtarchiv", "Ord_Ergebnis", -1197000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "47", "Stadtarchiv", "Ord_Ertraege", 21400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "47", "Stadtarchiv", "Personalaufwendungen", 866700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "47", "Stadtarchiv", "Sach_Dienstleistungen", 233600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "47", "Stadtarchiv", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "47", "Stadtarchiv", "Sonstige_Aufwendungen", 75100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "47", "Stadtarchiv", "Ord_Aufwendungen_Gesamt", 1175400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "47", "Stadtarchiv", "Ord_Ergebnis", -1154000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "50", "Amt für Soziales und Senioren", "Ord_Ertraege", 31532180, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "50", "Amt für Soziales und Senioren", "Personalaufwendungen", 11141700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "50", "Amt für Soziales und Senioren", "Sach_Dienstleistungen", 7121850, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "50", "Amt für Soziales und Senioren", "Transferaufwendungen", 87494320, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "50", "Amt für Soziales und Senioren", "Sonstige_Aufwendungen", 737230, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "50", "Amt für Soziales und Senioren", "Ord_Aufwendungen_Gesamt", 106495100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "50", "Amt für Soziales und Senioren", "Ord_Ergebnis", -74962920, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "50", "Amt für Soziales und Senioren", "Ord_Ertraege", 30453670, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "50", "Amt für Soziales und Senioren", "Personalaufwendungen", 11446800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "50", "Amt für Soziales und Senioren", "Sach_Dienstleistungen", 7386450, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "50", "Amt für Soziales und Senioren", "Transferaufwendungen", 90568820, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "50", "Amt für Soziales und Senioren", "Sonstige_Aufwendungen", 760930, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "50", "Amt für Soziales und Senioren", "Ord_Aufwendungen_Gesamt", 110163000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "50", "Amt für Soziales und Senioren", "Ord_Ergebnis", -79709330, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "JC", "Jobcenter Heidelberg", "Ord_Ertraege", 21351000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "JC", "Jobcenter Heidelberg", "Personalaufwendungen", 2697900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "JC", "Jobcenter Heidelberg", "Sach_Dienstleistungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "JC", "Jobcenter Heidelberg", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "JC", "Jobcenter Heidelberg", "Sonstige_Aufwendungen", 27059000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "JC", "Jobcenter Heidelberg", "Ord_Aufwendungen_Gesamt", 29756900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "JC", "Jobcenter Heidelberg", "Ord_Ergebnis", -8405900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "JC", "Jobcenter Heidelberg", "Ord_Ertraege", 21860000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "JC", "Jobcenter Heidelberg", "Personalaufwendungen", 2776500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "JC", "Jobcenter Heidelberg", "Sach_Dienstleistungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "JC", "Jobcenter Heidelberg", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "JC", "Jobcenter Heidelberg", "Sonstige_Aufwendungen", 27686000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "JC", "Jobcenter Heidelberg", "Ord_Aufwendungen_Gesamt", 30462500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "JC", "Jobcenter Heidelberg", "Ord_Ergebnis", -8602500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "51", "Kinder- und Jugendamt", "Ord_Ertraege", 69742400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "51", "Kinder- und Jugendamt", "Personalaufwendungen", 35186600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "51", "Kinder- und Jugendamt", "Sach_Dienstleistungen", 9797500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "51", "Kinder- und Jugendamt", "Transferaufwendungen", 118366400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "51", "Kinder- und Jugendamt", "Sonstige_Aufwendungen", 4506800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "51", "Kinder- und Jugendamt", "Ord_Aufwendungen_Gesamt", 167857300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "51", "Kinder- und Jugendamt", "Ord_Ergebnis", -98114900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "51", "Kinder- und Jugendamt", "Ord_Ertraege", 72760100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "51", "Kinder- und Jugendamt", "Personalaufwendungen", 35727000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "51", "Kinder- und Jugendamt", "Sach_Dienstleistungen", 10021300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "51", "Kinder- und Jugendamt", "Transferaufwendungen", 124414600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "51", "Kinder- und Jugendamt", "Sonstige_Aufwendungen", 4582800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "51", "Kinder- und Jugendamt", "Ord_Aufwendungen_Gesamt", 174745700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "51", "Kinder- und Jugendamt", "Ord_Ergebnis", -101985600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "52", "Amt für Sport und Gesundheitsförderung", "Ord_Ertraege", 1725800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "52", "Amt für Sport und Gesundheitsförderung", "Personalaufwendungen", 1451100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "52", "Amt für Sport und Gesundheitsförderung", "Sach_Dienstleistungen", 6186300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "52", "Amt für Sport und Gesundheitsförderung", "Transferaufwendungen", 1312000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "52", "Amt für Sport und Gesundheitsförderung", "Sonstige_Aufwendungen", 2147400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "52", "Amt für Sport und Gesundheitsförderung", "Ord_Aufwendungen_Gesamt", 11096800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "52", "Amt für Sport und Gesundheitsförderung", "Ord_Ergebnis", -9371000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "52", "Amt für Sport und Gesundheitsförderung", "Ord_Ertraege", 1378700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "52", "Amt für Sport und Gesundheitsförderung", "Personalaufwendungen", 1510800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "52", "Amt für Sport und Gesundheitsförderung", "Sach_Dienstleistungen", 6274100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "52", "Amt für Sport und Gesundheitsförderung", "Transferaufwendungen", 1332000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "52", "Amt für Sport und Gesundheitsförderung", "Sonstige_Aufwendungen", 2387300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "52", "Amt für Sport und Gesundheitsförderung", "Ord_Aufwendungen_Gesamt", 11504200, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "52", "Amt für Sport und Gesundheitsförderung", "Ord_Ergebnis", -10125500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "61", "Stadtplanungsamt", "Ord_Ertraege", 531400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "61", "Stadtplanungsamt", "Personalaufwendungen", 4364700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "61", "Stadtplanungsamt", "Sach_Dienstleistungen", 105600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "61", "Stadtplanungsamt", "Transferaufwendungen", 30000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "61", "Stadtplanungsamt", "Sonstige_Aufwendungen", 481700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "61", "Stadtplanungsamt", "Ord_Aufwendungen_Gesamt", 4982000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "61", "Stadtplanungsamt", "Ord_Ergebnis", -4450600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "61", "Stadtplanungsamt", "Ord_Ertraege", 431400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "61", "Stadtplanungsamt", "Personalaufwendungen", 4452600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "61", "Stadtplanungsamt", "Sach_Dienstleistungen", 105600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "61", "Stadtplanungsamt", "Transferaufwendungen", 30000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "61", "Stadtplanungsamt", "Sonstige_Aufwendungen", 502700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "61", "Stadtplanungsamt", "Ord_Aufwendungen_Gesamt", 5090900, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "61", "Stadtplanungsamt", "Ord_Ergebnis", -4659500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "GB", "Geschäftsstelle Bahnstadt/PHV", "Ord_Ertraege", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "GB", "Geschäftsstelle Bahnstadt/PHV", "Personalaufwendungen", 398300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "GB", "Geschäftsstelle Bahnstadt/PHV", "Sach_Dienstleistungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "GB", "Geschäftsstelle Bahnstadt/PHV", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "GB", "Geschäftsstelle Bahnstadt/PHV", "Sonstige_Aufwendungen", 6000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "GB", "Geschäftsstelle Bahnstadt/PHV", "Ord_Aufwendungen_Gesamt", 404300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "GB", "Geschäftsstelle Bahnstadt/PHV", "Ord_Ergebnis", -404300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "GB", "Geschäftsstelle Bahnstadt/PHV", "Ord_Ertraege", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "GB", "Geschäftsstelle Bahnstadt/PHV", "Personalaufwendungen", 408300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "GB", "Geschäftsstelle Bahnstadt/PHV", "Sach_Dienstleistungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "GB", "Geschäftsstelle Bahnstadt/PHV", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "GB", "Geschäftsstelle Bahnstadt/PHV", "Sonstige_Aufwendungen", 6300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "GB", "Geschäftsstelle Bahnstadt/PHV", "Ord_Aufwendungen_Gesamt", 414600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "GB", "Geschäftsstelle Bahnstadt/PHV", "Ord_Ergebnis", -414600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "62", "Vermessungsamt", "Ord_Ertraege", 945000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "62", "Vermessungsamt", "Personalaufwendungen", 3594300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "62", "Vermessungsamt", "Sach_Dienstleistungen", 384500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "62", "Vermessungsamt", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "62", "Vermessungsamt", "Sonstige_Aufwendungen", 193100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "62", "Vermessungsamt", "Ord_Aufwendungen_Gesamt", 4171900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "62", "Vermessungsamt", "Ord_Ergebnis", -3226900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "62", "Vermessungsamt", "Ord_Ertraege", 943000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "62", "Vermessungsamt", "Personalaufwendungen", 3703400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "62", "Vermessungsamt", "Sach_Dienstleistungen", 350100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "62", "Vermessungsamt", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "62", "Vermessungsamt", "Sonstige_Aufwendungen", 187500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "62", "Vermessungsamt", "Ord_Aufwendungen_Gesamt", 4241000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "62", "Vermessungsamt", "Ord_Ergebnis", -3298000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "63", "Amt für Baurecht und Denkmalschutz", "Ord_Ertraege", 4297300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "63", "Amt für Baurecht und Denkmalschutz", "Personalaufwendungen", 4449600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "63", "Amt für Baurecht und Denkmalschutz", "Sach_Dienstleistungen", 145900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "63", "Amt für Baurecht und Denkmalschutz", "Transferaufwendungen", 200000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "63", "Amt für Baurecht und Denkmalschutz", "Sonstige_Aufwendungen", 1135400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "63", "Amt für Baurecht und Denkmalschutz", "Ord_Aufwendungen_Gesamt", 5930900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "63", "Amt für Baurecht und Denkmalschutz", "Ord_Ergebnis", -1633600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "63", "Amt für Baurecht und Denkmalschutz", "Ord_Ertraege", 4297300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "63", "Amt für Baurecht und Denkmalschutz", "Personalaufwendungen", 4408100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "63", "Amt für Baurecht und Denkmalschutz", "Sach_Dienstleistungen", 157300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "63", "Amt für Baurecht und Denkmalschutz", "Transferaufwendungen", 300000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "63", "Amt für Baurecht und Denkmalschutz", "Sonstige_Aufwendungen", 1128900, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "63", "Amt für Baurecht und Denkmalschutz", "Ord_Aufwendungen_Gesamt", 5994300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "63", "Amt für Baurecht und Denkmalschutz", "Ord_Ergebnis", -1697000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "65", "Hochbauamt", "Ord_Ertraege", 1348600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "65", "Hochbauamt", "Personalaufwendungen", 5395100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "65", "Hochbauamt", "Sach_Dienstleistungen", 9849400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "65", "Hochbauamt", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "65", "Hochbauamt", "Sonstige_Aufwendungen", 714700, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "65", "Hochbauamt", "Ord_Aufwendungen_Gesamt", 15959200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "65", "Hochbauamt", "Ord_Ergebnis", -14610600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "65", "Hochbauamt", "Ord_Ertraege", 540000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "65", "Hochbauamt", "Personalaufwendungen", 5682500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "65", "Hochbauamt", "Sach_Dienstleistungen", 8649800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "65", "Hochbauamt", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "65", "Hochbauamt", "Sonstige_Aufwendungen", 738600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "65", "Hochbauamt", "Ord_Aufwendungen_Gesamt", 15070900, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "65", "Hochbauamt", "Ord_Ergebnis", -14530900, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "66", "Tiefbauamt", "Ord_Ertraege", 5445000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "66", "Tiefbauamt", "Personalaufwendungen", 7507900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "66", "Tiefbauamt", "Sach_Dienstleistungen", 11089100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "66", "Tiefbauamt", "Transferaufwendungen", 50000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "66", "Tiefbauamt", "Sonstige_Aufwendungen", 10945500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "66", "Tiefbauamt", "Ord_Aufwendungen_Gesamt", 29592500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "66", "Tiefbauamt", "Ord_Ergebnis", -24147500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "66", "Tiefbauamt", "Ord_Ertraege", 5498000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "66", "Tiefbauamt", "Personalaufwendungen", 8173700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "66", "Tiefbauamt", "Sach_Dienstleistungen", 11089100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "66", "Tiefbauamt", "Transferaufwendungen", 50000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "66", "Tiefbauamt", "Sonstige_Aufwendungen", 10752600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "66", "Tiefbauamt", "Ord_Aufwendungen_Gesamt", 30065400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "66", "Tiefbauamt", "Ord_Ergebnis", -24567400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Ord_Ertraege", 5330300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Personalaufwendungen", 11772100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Sach_Dienstleistungen", 5846806, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Transferaufwendungen", 47000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Sonstige_Aufwendungen", 2237600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Ord_Aufwendungen_Gesamt", 19903506, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Ord_Ergebnis", -14573206, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Ord_Ertraege", 5487800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Personalaufwendungen", 12118900, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Sach_Dienstleistungen", 5855698, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Transferaufwendungen", 47000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Sonstige_Aufwendungen", 2363400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Ord_Aufwendungen_Gesamt", 20384998, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Ord_Ergebnis", -14897198, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "67b", "Landschafts-/Forstamt: Forst", "Ord_Ertraege", 1877000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "67b", "Landschafts-/Forstamt: Forst", "Personalaufwendungen", 1872300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "67b", "Landschafts-/Forstamt: Forst", "Sach_Dienstleistungen", 1560494, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "67b", "Landschafts-/Forstamt: Forst", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "67b", "Landschafts-/Forstamt: Forst", "Sonstige_Aufwendungen", 308200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "67b", "Landschafts-/Forstamt: Forst", "Ord_Aufwendungen_Gesamt", 3740994, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "67b", "Landschafts-/Forstamt: Forst", "Ord_Ergebnis", -1863994, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "67b", "Landschafts-/Forstamt: Forst", "Ord_Ertraege", 1880700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "67b", "Landschafts-/Forstamt: Forst", "Personalaufwendungen", 1862800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "67b", "Landschafts-/Forstamt: Forst", "Sach_Dienstleistungen", 1566702, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "67b", "Landschafts-/Forstamt: Forst", "Transferaufwendungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "67b", "Landschafts-/Forstamt: Forst", "Sonstige_Aufwendungen", 316100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "67b", "Landschafts-/Forstamt: Forst", "Ord_Aufwendungen_Gesamt", 3745602, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "67b", "Landschafts-/Forstamt: Forst", "Ord_Ergebnis", -1864902, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "70", "Abfallwirtschaft und Stadtreinigung", "Ord_Ertraege", 36245410, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "70", "Abfallwirtschaft und Stadtreinigung", "Personalaufwendungen", 19754200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "70", "Abfallwirtschaft und Stadtreinigung", "Sach_Dienstleistungen", 21397640, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "70", "Abfallwirtschaft und Stadtreinigung", "Transferaufwendungen", 100000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "70", "Abfallwirtschaft und Stadtreinigung", "Sonstige_Aufwendungen", 3550300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "70", "Abfallwirtschaft und Stadtreinigung", "Ord_Aufwendungen_Gesamt", 44802140, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "70", "Abfallwirtschaft und Stadtreinigung", "Ord_Ergebnis", -8556730, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "70", "Abfallwirtschaft und Stadtreinigung", "Ord_Ertraege", 36292910, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "70", "Abfallwirtschaft und Stadtreinigung", "Personalaufwendungen", 20257400, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "70", "Abfallwirtschaft und Stadtreinigung", "Sach_Dienstleistungen", 21028930, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "70", "Abfallwirtschaft und Stadtreinigung", "Transferaufwendungen", 100000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "70", "Abfallwirtschaft und Stadtreinigung", "Sonstige_Aufwendungen", 3716600, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "70", "Abfallwirtschaft und Stadtreinigung", "Ord_Aufwendungen_Gesamt", 45102930, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "70", "Abfallwirtschaft und Stadtreinigung", "Ord_Ergebnis", -8810020, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Ord_Ertraege", 55100, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Personalaufwendungen", 1802600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Sach_Dienstleistungen", 463500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Transferaufwendungen", 574000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Sonstige_Aufwendungen", 111500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Ord_Aufwendungen_Gesamt", 2951600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Ord_Ergebnis", -2896500, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Ord_Ertraege", 72100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Personalaufwendungen", 1909800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Sach_Dienstleistungen", 463500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Transferaufwendungen", 607500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Sonstige_Aufwendungen", 114100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Ord_Aufwendungen_Gesamt", 3094900, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Ord_Ergebnis", -3022800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "81", "Amt für Mobilität", "Ord_Ertraege", 6782120, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "81", "Amt für Mobilität", "Personalaufwendungen", 8660600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "81", "Amt für Mobilität", "Sach_Dienstleistungen", 2569600, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "81", "Amt für Mobilität", "Transferaufwendungen", 1080400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "81", "Amt für Mobilität", "Sonstige_Aufwendungen", 9833300, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "81", "Amt für Mobilität", "Ord_Aufwendungen_Gesamt", 22143900, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "81", "Amt für Mobilität", "Ord_Ergebnis", -15361780, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "81", "Amt für Mobilität", "Ord_Ertraege", 7227300, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "81", "Amt für Mobilität", "Personalaufwendungen", 8908800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "81", "Amt für Mobilität", "Sach_Dienstleistungen", 2663100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "81", "Amt für Mobilität", "Transferaufwendungen", 1080500, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "81", "Amt für Mobilität", "Sonstige_Aufwendungen", 8363700, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "81", "Amt für Mobilität", "Ord_Aufwendungen_Gesamt", 21016100, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "81", "Amt für Mobilität", "Ord_Ergebnis", -13788800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2025, "Plan (Beitritt)", "FW", "Allgemeine Finanzwirtschaft", "Ord_Ertraege", 538430200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "FW", "Allgemeine Finanzwirtschaft", "Personalaufwendungen", 3974200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "FW", "Allgemeine Finanzwirtschaft", "Sach_Dienstleistungen", 0, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "FW", "Allgemeine Finanzwirtschaft", "Transferaufwendungen", 103850000, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "FW", "Allgemeine Finanzwirtschaft", "Sonstige_Aufwendungen", 8244200, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "FW", "Allgemeine Finanzwirtschaft", "Ord_Aufwendungen_Gesamt", 116068400, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2025, "Plan (Beitritt)", "FW", "Allgemeine Finanzwirtschaft", "Ord_Ergebnis", 422361800, "EUR", "Haushalt 25/26", "Q4", "82–83", null], [2026, "Plan (Beitritt)", "FW", "Allgemeine Finanzwirtschaft", "Ord_Ertraege", 570545800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "FW", "Allgemeine Finanzwirtschaft", "Personalaufwendungen", 4246800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "FW", "Allgemeine Finanzwirtschaft", "Sach_Dienstleistungen", 0, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "FW", "Allgemeine Finanzwirtschaft", "Transferaufwendungen", 104100000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "FW", "Allgemeine Finanzwirtschaft", "Sonstige_Aufwendungen", 9751000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "FW", "Allgemeine Finanzwirtschaft", "Ord_Aufwendungen_Gesamt", 118097800, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Plan (Beitritt)", "FW", "Allgemeine Finanzwirtschaft", "Ord_Ergebnis", 452448000, "EUR", "Haushalt 25/26", "Q4", "84–85", null], [2026, "Nachtrag", "11", "Personal- und Organisationsamt", "Ord_Ertraege", 1551400, "EUR", "Nachtrag 26", "Q5", 73, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "11", "Personal- und Organisationsamt", "Ord_Aufw_Gesamt", 24128310, "EUR", "Nachtrag 26", "Q5", 73, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "11", "Personal- und Organisationsamt", "Ord_Ergebnis", -22576910, "EUR", "Nachtrag 26", "Q5", 73, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "12", "Amt für Stadtentwicklung und Statistik", "Ord_Ertraege", 61000, "EUR", "Nachtrag 26", "Q5", 77, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "12", "Amt für Stadtentwicklung und Statistik", "Ord_Aufw_Gesamt", 4422050, "EUR", "Nachtrag 26", "Q5", 77, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "12", "Amt für Stadtentwicklung und Statistik", "Ord_Ergebnis", -4361050, "EUR", "Nachtrag 26", "Q5", 77, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "13", "Amt für Öffentlichkeitsarbeit", "Ord_Ertraege", 10200, "EUR", "Nachtrag 26", "Q5", 85, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "13", "Amt für Öffentlichkeitsarbeit", "Ord_Aufw_Gesamt", 1844900, "EUR", "Nachtrag 26", "Q5", 85, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "13", "Amt für Öffentlichkeitsarbeit", "Ord_Ergebnis", -1834700, "EUR", "Nachtrag 26", "Q5", 85, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "14", "Rechnungsprüfungsamt", "Ord_Ertraege", 91600, "EUR", "Nachtrag 26", "Q5", 89, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "14", "Rechnungsprüfungsamt", "Ord_Aufw_Gesamt", 1716500, "EUR", "Nachtrag 26", "Q5", 89, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "14", "Rechnungsprüfungsamt", "Ord_Ergebnis", -1624900, "EUR", "Nachtrag 26", "Q5", 89, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "15", "Bürger- und Ordnungsamt", "Ord_Ertraege", 7630450, "EUR", "Nachtrag 26", "Q5", 93, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "15", "Bürger- und Ordnungsamt", "Ord_Aufw_Gesamt", 19986700, "EUR", "Nachtrag 26", "Q5", 93, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "15", "Bürger- und Ordnungsamt", "Ord_Ergebnis", -12356250, "EUR", "Nachtrag 26", "Q5", 93, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "16", "Amt für Chancengleichheit", "Ord_Ertraege", 578800, "EUR", "Nachtrag 26", "Q5", 97, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "16", "Amt für Chancengleichheit", "Ord_Aufw_Gesamt", 4704712, "EUR", "Nachtrag 26", "Q5", 97, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "16", "Amt für Chancengleichheit", "Ord_Ergebnis", 4125912, "EUR", "Nachtrag 26", "Q5", 97, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "17", "Amt für Digitales/Informationsverarbeitung", "Ord_Ertraege", 728900, "EUR", "Nachtrag 26", "Q5", 105, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "17", "Amt für Digitales/Informationsverarbeitung", "Ord_Aufw_Gesamt", 12861800, "EUR", "Nachtrag 26", "Q5", 105, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "17", "Amt für Digitales/Informationsverarbeitung", "Ord_Ergebnis", -12132900, "EUR", "Nachtrag 26", "Q5", 105, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "20", "Kämmereiamt", "Ord_Ertraege", 20851500, "EUR", "Nachtrag 26", "Q5", 109, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "20", "Kämmereiamt", "Ord_Aufw_Gesamt", 102472780, "EUR", "Nachtrag 26", "Q5", 109, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "20", "Kämmereiamt", "Ord_Ergebnis", -81621280, "EUR", "Nachtrag 26", "Q5", 109, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "23", "Amt für Liegenschaften", "Ord_Ertraege", 10313300, "EUR", "Nachtrag 26", "Q5", 113, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "23", "Amt für Liegenschaften", "Ord_Aufw_Gesamt", 11908300, "EUR", "Nachtrag 26", "Q5", 113, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "23", "Amt für Liegenschaften", "Ord_Ergebnis", -1595000, "EUR", "Nachtrag 26", "Q5", 113, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "30", "Rechtsamt", "Ord_Ertraege", 3417000, "EUR", "Nachtrag 26", "Q5", 123, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "30", "Rechtsamt", "Ord_Aufw_Gesamt", 4959500, "EUR", "Nachtrag 26", "Q5", 123, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "30", "Rechtsamt", "Ord_Ergebnis", -1542500, "EUR", "Nachtrag 26", "Q5", 123, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Ord_Ertraege", 650800, "EUR", "Nachtrag 26", "Q5", 127, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Ord_Aufw_Gesamt", 7640400, "EUR", "Nachtrag 26", "Q5", 127, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Ord_Ergebnis", -6989600, "EUR", "Nachtrag 26", "Q5", 127, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "34", "Standesamt", "Ord_Ertraege", 720000, "EUR", "Nachtrag 26", "Q5", 133, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "34", "Standesamt", "Ord_Aufw_Gesamt", 2173800, "EUR", "Nachtrag 26", "Q5", 133, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "34", "Standesamt", "Ord_Ergebnis", -1453800, "EUR", "Nachtrag 26", "Q5", 133, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "37", "Feuerwehr", "Ord_Ertraege", 2704400, "EUR", "Nachtrag 26", "Q5", 137, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "37", "Feuerwehr", "Ord_Aufw_Gesamt", 19351700, "EUR", "Nachtrag 26", "Q5", 137, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "37", "Feuerwehr", "Ord_Ergebnis", -16647300, "EUR", "Nachtrag 26", "Q5", 137, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "40", "Amt für Schule und Bildung", "Ord_Ertraege", 32529500, "EUR", "Nachtrag 26", "Q5", 143, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "40", "Amt für Schule und Bildung", "Ord_Aufw_Gesamt", 64534747, "EUR", "Nachtrag 26", "Q5", 143, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "40", "Amt für Schule und Bildung", "Ord_Ergebnis", -32005247, "EUR", "Nachtrag 26", "Q5", 143, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "41", "Kulturamt", "Ord_Ertraege", 3700, "EUR", "Nachtrag 26", "Q5", 149, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "41", "Kulturamt", "Ord_Aufw_Gesamt", 7206602, "EUR", "Nachtrag 26", "Q5", 149, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "41", "Kulturamt", "Ord_Ergebnis", -7202902, "EUR", "Nachtrag 26", "Q5", 149, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "45", "Stadtbücherei", "Ord_Ertraege", 565800, "EUR", "Nachtrag 26", "Q5", 153, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "45", "Stadtbücherei", "Ord_Aufw_Gesamt", 4395000, "EUR", "Nachtrag 26", "Q5", 153, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "45", "Stadtbücherei", "Ord_Ergebnis", -3829200, "EUR", "Nachtrag 26", "Q5", 153, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "46", "Musik- und Singschule", "Ord_Ertraege", 2499600, "EUR", "Nachtrag 26", "Q5", 157, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "46", "Musik- und Singschule", "Ord_Aufw_Gesamt", 6046500, "EUR", "Nachtrag 26", "Q5", 157, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "46", "Musik- und Singschule", "Ord_Ergebnis", -3546900, "EUR", "Nachtrag 26", "Q5", 157, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "47", "Stadtarchiv", "Ord_Ertraege", 21400, "EUR", "Nachtrag 26", "Q5", 161, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "47", "Stadtarchiv", "Ord_Aufw_Gesamt", 1173400, "EUR", "Nachtrag 26", "Q5", 161, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "47", "Stadtarchiv", "Ord_Ergebnis", 1152000, "EUR", "Nachtrag 26", "Q5", 161, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "50", "Amt für Soziales und Senioren", "Ord_Ertraege", 34218670, "EUR", "Nachtrag 26", "Q5", 165, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "50", "Amt für Soziales und Senioren", "Ord_Aufw_Gesamt", 106031200, "EUR", "Nachtrag 26", "Q5", 165, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "50", "Amt für Soziales und Senioren", "Ord_Ergebnis", -71612530, "EUR", "Nachtrag 26", "Q5", 165, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "51", "Kinder- und Jugendamt", "Ord_Ertraege", 72342100, "EUR", "Nachtrag 26", "Q5", 173, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "51", "Kinder- und Jugendamt", "Ord_Aufw_Gesamt", 171593100, "EUR", "Nachtrag 26", "Q5", 173, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "51", "Kinder- und Jugendamt", "Ord_Ergebnis", -99251000, "EUR", "Nachtrag 26", "Q5", 173, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "52", "Amt für Sport und Gesundheitsförderung", "Ord_Ertraege", 1378700, "EUR", "Nachtrag 26", "Q5", 179, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "52", "Amt für Sport und Gesundheitsförderung", "Ord_Aufw_Gesamt", 11417200, "EUR", "Nachtrag 26", "Q5", 179, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "52", "Amt für Sport und Gesundheitsförderung", "Ord_Ergebnis", -10038500, "EUR", "Nachtrag 26", "Q5", 179, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "61", "Stadtplanungsamt", "Ord_Ertraege", 431400, "EUR", "Nachtrag 26", "Q5", 183, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "61", "Stadtplanungsamt", "Ord_Aufw_Gesamt", 5050900, "EUR", "Nachtrag 26", "Q5", 183, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "61", "Stadtplanungsamt", "Ord_Ergebnis", -4619500, "EUR", "Nachtrag 26", "Q5", 183, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "62", "Vermessungsamt", "Ord_Ertraege", 943000, "EUR", "Nachtrag 26", "Q5", 191, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "62", "Vermessungsamt", "Ord_Aufw_Gesamt", 4156000, "EUR", "Nachtrag 26", "Q5", 191, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "62", "Vermessungsamt", "Ord_Ergebnis", -3213000, "EUR", "Nachtrag 26", "Q5", 191, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "63", "Amt für Baurecht und Denkmalschutz", "Ord_Ertraege", 4297300, "EUR", "Nachtrag 26", "Q5", 195, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "63", "Amt für Baurecht und Denkmalschutz", "Ord_Aufw_Gesamt", 5931526, "EUR", "Nachtrag 26", "Q5", 195, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "63", "Amt für Baurecht und Denkmalschutz", "Ord_Ergebnis", -1634226, "EUR", "Nachtrag 26", "Q5", 195, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "65", "Hochbauamt", "Ord_Ertraege", 540000, "EUR", "Nachtrag 26", "Q5", 199, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "65", "Hochbauamt", "Ord_Aufw_Gesamt", 14765900, "EUR", "Nachtrag 26", "Q5", 199, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "65", "Hochbauamt", "Ord_Ergebnis", -14225900, "EUR", "Nachtrag 26", "Q5", 199, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "66", "Tiefbauamt", "Ord_Ertraege", 5498000, "EUR", "Nachtrag 26", "Q5", 203, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "66", "Tiefbauamt", "Ord_Aufw_Gesamt", 29720400, "EUR", "Nachtrag 26", "Q5", 203, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "66", "Tiefbauamt", "Ord_Ergebnis", -24222400, "EUR", "Nachtrag 26", "Q5", 203, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Ord_Ertraege", 5487800, "EUR", "Nachtrag 26", "Q5", 209, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Ord_Aufw_Gesamt", 20284998, "EUR", "Nachtrag 26", "Q5", 209, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Ord_Ergebnis", -14797198, "EUR", "Nachtrag 26", "Q5", 209, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "67b", "Landschafts-/Forstamt: Forst", "Ord_Ertraege", 2080700, "EUR", "Nachtrag 26", "Q5", 213, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "67b", "Landschafts-/Forstamt: Forst", "Ord_Aufw_Gesamt", 3755602, "EUR", "Nachtrag 26", "Q5", 213, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "67b", "Landschafts-/Forstamt: Forst", "Ord_Ergebnis", -1674902, "EUR", "Nachtrag 26", "Q5", 213, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "70", "Abfallwirtschaft und Stadtreinigung", "Ord_Ertraege", 36374910, "EUR", "Nachtrag 26", "Q5", 217, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "70", "Abfallwirtschaft und Stadtreinigung", "Ord_Aufw_Gesamt", 44753930, "EUR", "Nachtrag 26", "Q5", 217, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "70", "Abfallwirtschaft und Stadtreinigung", "Ord_Ergebnis", -8379020, "EUR", "Nachtrag 26", "Q5", 217, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Ord_Ertraege", 72100, "EUR", "Nachtrag 26", "Q5", 221, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Ord_Aufw_Gesamt", 3002400, "EUR", "Nachtrag 26", "Q5", 221, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "80", "Amt für Wirtschaftsförderung/Wissenschaft", "Ord_Ergebnis", 2930300, "EUR", "Nachtrag 26", "Q5", 221, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "81", "Amt für Mobilität", "Ord_Ertraege", 7328830, "EUR", "Nachtrag 26", "Q5", 225, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "81", "Amt für Mobilität", "Ord_Aufw_Gesamt", 20208600, "EUR", "Nachtrag 26", "Q5", 225, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "81", "Amt für Mobilität", "Ord_Ergebnis", -12879770, "EUR", "Nachtrag 26", "Q5", 225, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "FW", "Allgemeine Finanzwirtschaft", "Ord_Ertraege", 585690000, "EUR", "Nachtrag 26", "Q5", 231, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "FW", "Allgemeine Finanzwirtschaft", "Ord_Aufw_Gesamt", 106200000, "EUR", "Nachtrag 26", "Q5", 231, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "FW", "Allgemeine Finanzwirtschaft", "Ord_Ergebnis", 479490000, "EUR", "Nachtrag 26", "Q5", 231, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "GB", "Geschäftsstelle Bahnstadt/PHV", "Ord_Ertraege", 0, "EUR", "Nachtrag 26", "Q5", 187, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "GB", "Geschäftsstelle Bahnstadt/PHV", "Ord_Aufw_Gesamt", 394100, "EUR", "Nachtrag 26", "Q5", 187, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "GB", "Geschäftsstelle Bahnstadt/PHV", "Ord_Ergebnis", -394100, "EUR", "Nachtrag 26", "Q5", 187, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "IZ", "Interkulturelles Zentrum", "Ord_Ertraege", 24000, "EUR", "Nachtrag 26", "Q5", 101, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "IZ", "Interkulturelles Zentrum", "Ord_Aufw_Gesamt", 718600, "EUR", "Nachtrag 26", "Q5", 101, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "IZ", "Interkulturelles Zentrum", "Ord_Ergebnis", 694600, "EUR", "Nachtrag 26", "Q5", 101, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "KW", "Kultur- und Kreativwirtschaft", "Ord_Ertraege", 0, "EUR", "Nachtrag 26", "Q5", 81, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "KW", "Kultur- und Kreativwirtschaft", "Ord_Aufw_Gesamt", 403500, "EUR", "Nachtrag 26", "Q5", 81, "Geänderte Werte nach Nachtragshaushalt 2026"], [2026, "Nachtrag", "KW", "Kultur- und Kreativwirtschaft", "Ord_Ergebnis", -403500, "EUR", "Nachtrag 26", "Q5", 81, "Geänderte Werte nach Nachtragshaushalt 2026"]], "label": "02 · Teilhaushalte", "icon": "🏛️"}, "08_Schulden_Liquiditaet": {"type": "table", "headers": ["Jahr", "Plan_Typ", "Kennzahl", "Wert", "Einheit", "Quelle_Datei", "Quelle_PDF", "Quelle_Seite", "Hinweis"], "rows": [[2018, "Ist", "Schuldenstand 31.12.", 188.9, "Mio. €", "Haushalt 19/20", "Q1", 109, null], [2019, "Plan", "Schuldenstand 31.12.", 206.8, "Mio. €", "Haushalt 19/20", "Q1", 109, null], [2019, "Plan", "Kreditneuaufnahmen", 25.8, "Mio. €", "Haushalt 19/20", "Q1", 109, null], [2019, "Plan", "Tilgungen", 7.9, "Mio. €", "Haushalt 19/20", "Q1", 109, null], [2020, "Plan", "Schuldenstand 31.12.", 226.9, "Mio. €", "Haushalt 19/20", "Q1", 109, null], [2020, "Plan", "Kreditneuaufnahmen", 28.5, "Mio. €", "Haushalt 19/20", "Q1", 109, null], [2020, "Plan", "Tilgungen", 8.4, "Mio. €", "Haushalt 19/20", "Q1", 109, null], [2021, "MiFri", "Schuldenstand 31.12.", 255.3, "Mio. €", "Haushalt 19/20", "Q1", 109, "Plan-Trajektorie aus 2019/20"], [2021, "Plan", "Schuldenstand 31.12.", 268.8, "Mio. €", "Haushalt 21/22", "Q2", 14, null], [2022, "MiFri", "Schuldenstand 31.12.", 292.5, "Mio. €", "Haushalt 19/20", "Q1", 109, null], [2022, "Ist", "Schuldenstand 31.12.", 209.3, "Mio. €", "Haushalt 23/24", "Q3", 15, "Realer Stand"], [2023, "MiFri", "Schuldenstand 31.12.", 334.8, "Mio. €", "Haushalt 19/20", "Q1", 109, null], [2023, "Plan", "Schuldenstand 31.12.", 259.3, "Mio. €", "Haushalt 23/24", "Q3", 15, null], [2024, "Ist", "Schuldenstand 31.12.", 331.5, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2025, "Ist", "Schuldenstand 01.01.", 322.5, "Mio. €", "Haushalt 25/26", "Q4", 0, null], [2025, "Plan", "Schuldenstand 31.12.", 401.4, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2025, "Plan (Beitritt)", "Kassenkredite Höchstbetrag", 175, "Mio. €", "Haushalt 25/26", "Q4", 0, "Satzung; 3,5× höher als 2023/24"], [2025, "Plan (Beitritt)", "Aufwandsdeckungsgrad", 91.1, "%", "Haushalt 25/26", "Q4", 113, null], [2025, "Plan (Beitritt)", "Pro-Kopf-Verschuldung", 7404, "€", "Haushalt 25/26", "Q4", 0, "Top-5 BW"], [2026, "Plan (Beitritt)", "Schuldenstand 31.12.", 467.4, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2026, "Nachtrag", "Schuldenstand 31.12.", 383.1, "Mio. €", "Nachtrag 26", "Q5", 12, "Reduktion durch Nachtrag"], [2026, "Ist", "Kassenkredite Bestand 01.01.", 65, "Mio. €", "Nachtrag 26", "Q5", 12, null], [2026, "Nachtrag", "Tilgung aus Ergebnishaushalt", 11.2, "Mio. €", "Nachtrag 26", "Q5", 12, null], [2026, "Nachtrag", "Kreditermächtigung neu", 177.2, "Mio. €", "Nachtrag 26", "Q5", 12, null], [2026, "Plan (Beitritt)", "Aufwandsdeckungsgrad", 89.1, "%", "Haushalt 25/26", "Q4", 113, null], [2027, "MiFri", "Schuldenstand 31.12.", 520.4, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2028, "MiFri", "Schuldenstand 31.12.", 564.6, "Mio. €", "Haushalt 25/26", "Q4", 14, null], [2029, "MiFri", "Schuldenstand 31.12.", 601.9, "Mio. €", "Haushalt 25/26", "Q4", 14, null]], "label": "08 · Schulden", "icon": "💰"}, "09_Kennzahlen": {"type": "table", "headers": ["Jahr", "Plan_Typ", "Kennzahl", "Wert", "Einheit", "Quelle_Datei", "Quelle_PDF", "Quelle_Seite", "Hinweis"], "rows": [[2024, "Ist", "Zinslastquote", 0.71, "%", "Haushalt 25/26", "Q4", 113, "Beginnt 2025/26 deutlich anzusteigen"], [2025, "Plan (Beitritt)", "Aufwandsdeckungsgrad", 91.1, "%", "Haushalt 25/26", "Q4", 113, "Verhältnis Ord_Ertraege/Ord_Aufwendungen"], [2026, "Plan (Beitritt)", "Aufwandsdeckungsgrad", 89.1, "%", "Haushalt 25/26", "Q4", 113, null], [2025, "Plan (Beitritt)", "Pro-Kopf-Verschuldung", 7404, "€/EW", "Haushalt 25/26", "Q4", 0, "Heidelberg unter Top-5 BW"], [2021, "MiFri", "Eigenfinanzierungsquote (Plan 2021-2023)", 49.5, "%", "Haushalt 19/20", "Q1", 109, "Rund Hälfte der Invest. fremdfinanziert"]], "hinweise": ["⚠️ Kennzahlentabellen in den PDFs (Q1-Q4) sind um 90° rotiert.", "Automatische Extraktion liefert verstümmelte Werte. Diese Tabelle enthält nur die wenigen lesbaren Werte + manuell verifizierte.", "Noch zu erfassende Kennzahlen (manuell aus PDFs):", "- Steuerquote", "- Zuwendungsquote", "- Personalintensität", "- Sach-/Dienstleistungsintensität", "- Transferaufwandsquote", "- Eigenkapitalquote", "- Anlagendeckungsgrad I", "- Anlagendeckungsgrad II", "- Anlagenintensität", "- Investitionsquote"], "label": "09 · Kennzahlen", "icon": "📐"}, "13_Mapping_TH_PB": {"type": "table", "headers": ["PB_Code", "PB_Bezeichnung", "PG_Code", "PG_Bezeichnung", "TH_Codes", "Quelle_PDF", "Quelle_Seite"], "rows": [["11", "Innere Verwaltung", "11.10", "Steuerung", "01", "Q4", "136-138"], ["11", "Innere Verwaltung", "11.11", "Organisation und Dokumentation kommunaler Willensbildung", "01", "Q4", "136-138"], ["11", "Innere Verwaltung", "11.12", "Steuerungsunterstützung / Controlling", "01, 11, 16, 17, 20, 30", "Q4", "136-138"], ["11", "Innere Verwaltung", "11.13", "Rechnungsprüfung", "14", "Q4", "136-138"], ["11", "Innere Verwaltung", "11.14", "Zentrale Funktionen", "01, 11, 12, 14, 16, IZ, 31", "Q4", "136-138"], ["11", "Innere Verwaltung", "11.20", "Organisation und EDV", "11, 17", "Q4", "136-138"], ["11", "Innere Verwaltung", "11.21", "Personalwesen / Kantine", "11, 23, 70", "Q4", "136-138"], ["11", "Innere Verwaltung", "11.22", "Finanzverwaltung / Kasse", "20", "Q4", "136-138"], ["11", "Innere Verwaltung", "11.23", "Justiziariat", "30", "Q4", "136-138"], ["11", "Innere Verwaltung", "11.24", "Gebäudemanagement / Tech. Immobilien", "17, 23, 31, 41, 65, 70", "Q4", "136-138"], ["11", "Innere Verwaltung", "11.25", "Grünanlagen, Werkstätten, Fahrzeuge", "67, 70", "Q4", "136-138"], ["11", "Innere Verwaltung", "11.26", "Zentrale Dienstleistungen", "01, 12, 17, 30, 65, 70", "Q4", "136-138"], ["11", "Innere Verwaltung", "11.30", "Presse- und Öffentlichkeitsarbeit", "13", "Q4", "136-138"], ["11", "Innere Verwaltung", "11.32", "Abgabewesen", "20", "Q4", "136-138"], ["11", "Innere Verwaltung", "11.33", "Grundstücksmanagement", "23", "Q4", "136-138"], ["12", "Sicherheit und Ordnung", "12.10", "Statistik und Wahlen", "12, 15", "Q4", "136-138"], ["12", "Sicherheit und Ordnung", "12.20", "Ordnungswesen", "15, 63, 70", "Q4", "136-138"], ["12", "Sicherheit und Ordnung", "12.21", "Verkehrswesen", "15, 30, 81", "Q4", "136-138"], ["12", "Sicherheit und Ordnung", "12.22", "Einwohnerwesen / Bürger- u. Rathausservice", "11, 15", "Q4", "136-138"], ["12", "Sicherheit und Ordnung", "12.23", "Personenstandswesen", "15, 34", "Q4", "136-138"], ["12", "Sicherheit und Ordnung", "12.24", "Kommunales Grundbuchwesen", "62", "Q4", "136-138"], ["12", "Sicherheit und Ordnung", "12.26", "Verbraucherschutz / Lebensmittel / Veterinär", "15", "Q4", "136-138"], ["12", "Sicherheit und Ordnung", "12.60", "Brandschutz", "37", "Q4", "136-138"], ["12", "Sicherheit und Ordnung", "12.80", "Katastrophenschutz", "37", "Q4", "136-138"], ["21", "Schulträgeraufgaben", "21.10", "Allgemeinbildende Schulen", "40", "Q4", "136-138"], ["21", "Schulträgeraufgaben", "21.20", "Sonderpädagog. Bildungs-/Beratungszentren", "40", "Q4", "136-138"], ["21", "Schulträgeraufgaben", "21.30", "Berufsbildende Schulen", "40", "Q4", "136-138"], ["21", "Schulträgeraufgaben", "21.40", "Schülerbezogene Leistungen", "40", "Q4", "136-138"], ["21", "Schulträgeraufgaben", "21.50", "Sonstige schulische Aufgaben/Einrichtungen", "40, 52", "Q4", "136-138"], ["25", "Museen, Archiv, Zoo", "25.20", "Kommunale Museen", "42", "Q4", "136-138"], ["25", "Museen, Archiv, Zoo", "25.21", "Stadtarchiv", "47", "Q4", "136-138"], ["26", "Theater, Konzerte, Musikschulen", "26.20", "Musikpflege", "41", "Q4", "136-138"], ["26", "Theater, Konzerte, Musikschulen", "26.30", "Musikschulen", "46", "Q4", "136-138"], ["27", "Volkshochschulen, Bibliotheken, kulturpäd. Einrichtungen", "27.10", "Volkshochschulen (Zuschuss)", "40", "Q4", "136-138"], ["27", "Volkshochschulen, Bibliotheken, kulturpäd. Einrichtungen", "27.20", "Stadtbücherei", "45", "Q4", "136-138"], ["28", "Sonstige Kulturpflege", "28.10", "Sonstige Kulturpflege", "41, LT", "Q4", "136-138"], ["31", "Soziale Hilfen", "31.10", "Grundversorgung SGB XII", "50", "Q4", "136-138"], ["31", "Soziale Hilfen", "31.20", "Grundsicherung SGB II", "JC", "Q4", "136-138"], ["31", "Soziale Hilfen", "31.30", "Hilfen für Flüchtlinge/Aussiedler", "50", "Q4", "136-138"], ["31", "Soziale Hilfen", "31.40", "Soziale Einrichtungen", "50", "Q4", "136-138"], ["31", "Soziale Hilfen", "31.50", "Fürsorgeleistungen BVG", "50", "Q4", "136-138"], ["31", "Soziale Hilfen", "31.60", "Sonst. Förderung Wohlfahrtspflege", "50", "Q4", "136-138"], ["31", "Soziale Hilfen", "31.70", "Betreuungsleistungen", "50", "Q4", "136-138"], ["31", "Soziale Hilfen", "31.80", "Sonst. soziale Hilfen (Wohngeld)", "50", "Q4", "136-138"], ["31", "Soziale Hilfen", "31.90", "Bildung und Teilhabe §6b BKGG", "50", "Q4", "136-138"], ["32", "Förderung Teilhabe Menschen mit Behinderungen", "32.10", "SGB IX Eingliederungshilfe", "50", "Q4", "136-138"], ["36", "Kinder-, Jugend- und Familienhilfe", "36.20", "Allg. Förderung junger Menschen", "40, 51", "Q4", "136-138"], ["36", "Kinder-, Jugend- und Familienhilfe", "36.30", "Hilfen für junge Menschen und Familien", "51", "Q4", "136-138"], ["36", "Kinder-, Jugend- und Familienhilfe", "36.50", "Förderung Kinder in Tageseinrichtungen/Tagespflege", "51", "Q4", "136-138"], ["36", "Kinder-, Jugend- und Familienhilfe", "36.80", "Kooperation und Vernetzung", "40, 51", "Q4", "136-138"], ["36", "Kinder-, Jugend- und Familienhilfe", "36.90", "Unterhaltsvorschussleistungen", "51", "Q4", "136-138"], ["41", "Gesundheitsdienste", "41.40", "Maßnahmen der Gesundheitspflege", "20, 52", "Q4", "136-138"], ["42", "Sport und Bäder", "42.10", "Förderung des Sports", "52", "Q4", "136-138"], ["42", "Sport und Bäder", "42.40", "Bäder", "52", "Q4", "136-138"], ["42", "Sport und Bäder", "42.41", "Sportstätten", "52", "Q4", "136-138"], ["51", "Räumliche Planung und Entwicklung", "51.10", "Stadtentwicklung, Städtebau, Verkehrsplanung", "12, 61, 63, 81, GB, KV, SW", "Q4", "136-138"], ["51", "Räumliche Planung und Entwicklung", "51.11", "Flächen-/grundstücksbezogene Daten/Grundlagen", "23, 62", "Q4", "136-138"], ["51", "Räumliche Planung und Entwicklung", "51.12", "Flurneuordnung", "62", "Q4", "136-138"], ["52", "Bauen und Wohnen", "52.10", "Bauordnung", "15, 63", "Q4", "136-138"], ["52", "Bauen und Wohnen", "52.20", "Wohnungsbauförderung/-versorgung", "12, 63", "Q4", "136-138"], ["52", "Bauen und Wohnen", "52.30", "Denkmalschutz/-pflege", "63", "Q4", "136-138"], ["53", "Ver- und Entsorgung", "53.10", "Elektrizität (Konzessionsabgabe)", "20", "Q4", "136-138"], ["53", "Ver- und Entsorgung", "53.20", "Gas (Konzessionsabgabe)", "20", "Q4", "136-138"], ["53", "Ver- und Entsorgung", "53.30", "Wasserversorgung", "20, 61", "Q4", "136-138"], ["53", "Ver- und Entsorgung", "53.40", "Fernwärme (Konzessionsabgabe)", "20", "Q4", "136-138"], ["53", "Ver- und Entsorgung", "53.70", "Abfallwirtschaft", "70", "Q4", "136-138"], ["53", "Ver- und Entsorgung", "53.80", "Abwasserbeseitigung", "62, 66", "Q4", "136-138"], ["54", "Verkehrsflächen und -anlagen, ÖPNV", "54.10", "Gemeindestraßen", "66, 70, 81", "Q4", "136-138"], ["54", "Verkehrsflächen und -anlagen, ÖPNV", "54.20", "Kreisstraßen", "66, 70, 81", "Q4", "136-138"], ["54", "Verkehrsflächen und -anlagen, ÖPNV", "54.30", "Landesstraßen", "66, 70, 81", "Q4", "136-138"], ["54", "Verkehrsflächen und -anlagen, ÖPNV", "54.40", "Bundesstraßen", "66, 70, 81", "Q4", "136-138"], ["54", "Verkehrsflächen und -anlagen, ÖPNV", "54.50", "Straßenreinigung/Winterdienst", "70", "Q4", "136-138"], ["54", "Verkehrsflächen und -anlagen, ÖPNV", "54.60", "Parkierungseinrichtungen", "81", "Q4", "136-138"], ["54", "Verkehrsflächen und -anlagen, ÖPNV", "54.70", "Verkehrsbetriebe / ÖPNV", "81", "Q4", "136-138"], ["54", "Verkehrsflächen und -anlagen, ÖPNV", "54.90", "Öffentliche Toilettenanlagen", "70", "Q4", "136-138"], ["55", "Natur-/Landschaftspflege, Friedhofswesen", "55.10", "Öff. Grün / Landschaftsbau", "67", "Q4", "136-138"], ["55", "Natur-/Landschaftspflege, Friedhofswesen", "55.20", "Gewässerschutz / wasserbauliche Anlagen", "31, 66", "Q4", "136-138"], ["55", "Natur-/Landschaftspflege, Friedhofswesen", "55.30", "Friedhofs-/Bestattungswesen", "67", "Q4", "136-138"], ["55", "Natur-/Landschaftspflege, Friedhofswesen", "55.40", "Naturschutz/Landschaftspflege", "31, 67", "Q4", "136-138"], ["55", "Natur-/Landschaftspflege, Friedhofswesen", "55.50", "Forstwirtschaft", "67b (Forst)", "Q4", "136-138"], ["55", "Natur-/Landschaftspflege, Friedhofswesen", "55.51", "Landwirtschaft", "67", "Q4", "136-138"], ["56", "Umweltschutz", "56.10", "Umwelt-/Klimaschutzmaßnahmen", "31", "Q4", "136-138"], ["56", "Umweltschutz", "56.20", "Arbeitsschutz", "31", "Q4", "136-138"], ["57", "Wirtschaft und Tourismus", "57.10", "Wirtschaftsförderung", "01, 16, 80, KW", "Q4", "136-138"], ["57", "Wirtschaft und Tourismus", "57.30", "Allg. Einrichtungen und Unternehmen", "15", "Q4", "136-138"], ["61", "Allgemeine Finanzwirtschaft", "61.10", "Steuern/Zuweisungen/Umlagen", "FW", "Q4", "136-138"], ["61", "Allgemeine Finanzwirtschaft", "61.20", "Sonstige allgemeine Finanzwirtschaft", "FW", "Q4", "136-138"]], "label": "13 · Mapping TH⇄PB", "icon": "🔗"}, "14_Stammdaten_TH": {"type": "table", "headers": ["TH_Code", "Bezeichnung_2025_26", "Bezeichnung_2023_24", "Bezeichnung_2021_22", "Bezeichnung_2019_20", "Erstes_Jahr", "Letztes_Jahr", "Hinweis"], "rows": [["01", "Referat des Oberbürgermeisters", "Referat des Oberbürgermeisters", "Referat des Oberbürgermeisters", "Referat des Oberbürgermeisters", 2019, "aktuell", "konstant"], ["02", "—", "Referat Finanzen, Wohnen, Liegenschaften, Konversion", "—", "—", 2023, 2024, "nur 2023/24 (Referat-Ebene, ohne Produktplan)"], ["11", "Personal- und Organisationsamt", "Personal- und Organisationsamt", "Personal- und Organisationsamt", "Personal- und Organisationsamt", 2019, "aktuell", "konstant"], ["12", "Amt für Stadtentwicklung und Statistik", "Amt für Stadtentwicklung und Statistik", "Amt für Stadtentwicklung und Statistik", "Amt für Stadtentwicklung und Statistik", 2019, "aktuell", "konstant"], ["13", "Amt für Öffentlichkeitsarbeit", "Amt für Öffentlichkeitsarbeit", "Amt für Öffentlichkeitsarbeit", "Amt für Öffentlichkeitsarbeit", 2019, "aktuell", "konstant"], ["14", "Rechnungsprüfungsamt", "Rechnungsprüfungsamt", "Rechnungsprüfungsamt", "Rechnungsprüfungsamt", 2019, "aktuell", "konstant"], ["15", "Bürger- und Ordnungsamt", "Bürger- und Ordnungsamt", "Bürger- und Ordnungsamt", "Bürger- und Ordnungsamt", 2019, "aktuell", "konstant"], ["16", "Amt für Chancengleichheit", "Amt für Chancengleichheit", "Amt für Chancengleichheit", "Amt für Chancengleichheit", 2019, "aktuell", "konstant"], ["17", "Amt für Digitales/Informationsverarbeitung", "Amt für Digitales/Informationsverarbeitung", "Amt für Informationsverarbeitung", "Amt für Informationsverarbeitung", 2019, "aktuell", "Umbenennung 2023+"], ["20", "Kämmereiamt", "Kämmereiamt", "Kämmereiamt", "Kämmereiamt", 2019, "aktuell", "konstant"], ["23", "Amt für Liegenschaften", "Amt für Liegenschaften", "Amt für Liegenschaften", "Amt für Liegenschaften", 2019, "aktuell", "2025: Auslagerung SW + KV"], ["30", "Rechtsamt", "Rechtsamt", "Rechtsamt", "Rechtsamt", 2019, "aktuell", "konstant"], ["31", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Amt für Umweltschutz, Gewerbeaufs., Energie", "Amt für Umweltschutz, Gewerbeaufs., Energie", 2019, "aktuell", "konstant"], ["34", "Standesamt", "Standesamt", "Standesamt", "Standesamt", 2019, "aktuell", "konstant"], ["37", "Feuerwehr", "Feuerwehr", "Feuerwehr", "Feuerwehr", 2019, "aktuell", "konstant"], ["40", "Amt für Schule und Bildung", "Amt für Schule und Bildung", "Amt für Schule und Bildung", "Amt für Schule und Bildung", 2019, "aktuell", "konstant"], ["41", "Kulturamt", "Kulturamt", "Kulturamt", "Kulturamt", 2019, "aktuell", "konstant"], ["42", "Kurpfälzisches Museum", "Kurpfälzisches Museum", "Kurpfälzisches Museum", "—", 2021, "aktuell", "eigenständiger TH ab 2021/22"], ["44", "—", "—", "—", "Theater und Philharmonisches Orchester", 2019, 2020, "Ab 2021 Eigenbetrieb → raus aus Kernhaushalt"], ["45", "Stadtbücherei", "Stadtbücherei", "Stadtbücherei", "Stadtbücherei", 2019, "aktuell", "konstant"], ["46", "Musik- und Singschule", "Musik- und Singschule", "Musik- und Singschule", "Musik- und Singschule", 2019, "aktuell", "konstant"], ["47", "Stadtarchiv", "Stadtarchiv", "Stadtarchiv", "Stadtarchiv", 2019, "aktuell", "konstant"], ["50", "Amt für Soziales und Senioren", "Amt für Soziales und Senioren", "Amt für Soziales und Senioren", "Amt für Soziales und Senioren", 2019, "aktuell", "konstant"], ["51", "Kinder- und Jugendamt", "Kinder- und Jugendamt", "Kinder- und Jugendamt", "Kinder- und Jugendamt", 2019, "aktuell", "konstant"], ["52", "Amt für Sport und Gesundheitsförderung", "Amt für Sport und Gesundheitsförderung", "Amt für Sport und Gesundheitsförderung", "Amt für Sport und Gesundheitsförderung", 2019, "aktuell", "konstant"], ["61", "Stadtplanungsamt", "Stadtplanungsamt", "Stadtplanungsamt", "Stadtplanungsamt", 2019, "aktuell", "konstant"], ["62", "Vermessungsamt", "Vermessungsamt", "Vermessungsamt", "Vermessungsamt", 2019, "aktuell", "konstant"], ["63", "Amt für Baurecht und Denkmalschutz", "Amt für Baurecht und Denkmalschutz", "Amt für Baurecht und Denkmalschutz", "Amt für Baurecht und Denkmalschutz", 2019, "aktuell", "konstant"], ["65", "Hochbauamt", "Hochbauamt", "Hochbauamt", "Hochbauamt", 2019, "aktuell", "konstant"], ["66", "Tiefbauamt", "Tiefbauamt", "Tiefbauamt", "Tiefbauamt", 2019, "aktuell", "konstant"], ["67a", "Landschaftsamt: Grünanlagen, Friedhöfe", "Landschaftsamt: Grünanlagen, Friedhöfe", "Landschaftsamt: Grünanlagen, Friedhöfe", "Landschaftsamt: Grünanlagen, Friedhöfe", 2019, "aktuell", "Aufsplit 67/Forst"], ["67b", "Landschafts-/Forstamt: Bereich Forst", "Forst", "Forst", "Forst", 2019, "aktuell", "konstant"], ["70", "Abfallwirtschaft und Stadtreinigung", "Abfallwirtschaft, Stadtreinigung, Zentralwerkstätten", "Abfallwirtschaft und Stadtreinigung", "Abfallwirtschaft und Stadtreinigung", 2019, "aktuell", "2023: + Zentralwerkstätten"], ["80", "Amt für Wirtschaftsförderung/Wissenschaft", "Amt für Wirtschaftsförderung/Wissenschaft", "Amt für Wirtschaftsförderung/Wissenschaft", "Amt für Wirtschaftsförderung/Wissenschaft", 2019, "aktuell", "konstant"], ["81", "Amt für Mobilität", "Amt für Mobilität", "Amt für Verkehrsmanagement", "Amt für Verkehrsmanagement", 2019, "aktuell", "Umbenennung 2023"], ["FW", "Allgemeine Finanzwirtschaft", "Allgemeine Finanzwirtschaft", "Allgemeine Finanzwirtschaft", "Allgemeine Finanzwirtschaft", 2019, "aktuell", "Steuer- und Umlagenposition"], ["IZ", "Interkulturelles Zentrum", "Interkulturelles Zentrum", "Interkulturelles Zentrum", "Interkulturelles Zentrum", 2019, "aktuell", "konstant"], ["JC", "Jobcenter Heidelberg", "Jobcenter Heidelberg", "Jobcenter Heidelberg", "Jobcenter Heidelberg", 2019, "aktuell", "konstant"], ["GB", "Geschäftsstelle Bahnstadt/PHV", "Geschäftsstelle Bahnstadt/PHV", "Gesch.stelle Bahnstadt/PHV", "Bahnstadt", 2019, "aktuell", "2021: erweitert um PHV"], ["KW", "Stabsstelle Kultur- und Kreativwirtschaft", "Kultur- und Kreativwirtschaft", "Kultur- und Kreativwirtschaft", "—", 2021, "aktuell", "NEU ab 01.10.2020 (aus TH 12)"], ["LT", "Stabsstelle feeLit", "Heidelberger Literaturtage", "—", "—", 2023, "aktuell", "NEU 2023; 2025 umbenannt feeLit"], ["SW", "Team Wohnen und aktive Bodenpolitik", "—", "—", "—", 2025, "aktuell", "NEU 2025 (aus TH 23)"], ["KV", "Stabsstelle Konversion", "—", "—", "—", 2025, "aktuell", "NEU 2025 (aus TH 23)"]], "label": "14 · Stammdaten TH", "icon": "🗂️"}}};
+const SHEET_ORDER = ["00_README", "01_Eckdaten", "02_Teilhaushalte", "08_Schulden_Liquiditaet", "09_Kennzahlen", "13_Mapping_TH_PB", "14_Stammdaten_TH"];
+
+document.getElementById("generated-date").textContent = DATA.generated;
+
+// ===========================================================================
+// Helpers
+// ===========================================================================
+function fmtNum(v, einheit) {
+  if (v === null || v === undefined || v === "") return "";
+  if (typeof v !== "number") return String(v);
+  if (einheit === "EUR") {
+    return v.toLocaleString("de-DE", {maximumFractionDigits: 0});
+  }
+  if (einheit === "%") {
+    return v.toLocaleString("de-DE", {minimumFractionDigits: 1, maximumFractionDigits: 2}) + " %";
+  }
+  return v.toLocaleString("de-DE", {minimumFractionDigits: 1, maximumFractionDigits: 1});
+}
+function isNumeric(v) { return typeof v === "number" && !isNaN(v); }
+
+function cellClass(v, header) {
+  if (!isNumeric(v)) return "";
+  let cls = "num";
+  if (v < 0) cls += " neg";
+  return cls;
+}
+
+function cellRender(v, header, einheit) {
+  if (v === null || v === undefined) return "";
+  if (isNumeric(v)) return fmtNum(v, einheit);
+  return String(v);
+}
+
+// ===========================================================================
+// Navigation
+// ===========================================================================
+function buildSidebar() {
+  const sb = document.getElementById("sidebar");
+  for (const name of SHEET_ORDER) {
+    const meta = DATA.sheets[name];
+    if (!meta) continue;
+    const a = document.createElement("a");
+    a.href = "#" + name;
+    a.className = "nav-link";
+    a.dataset.target = "view-" + name;
+    a.textContent = meta.icon + " " + meta.label;
+    sb.appendChild(a);
+  }
+}
+
+function showView(id) {
+  document.querySelectorAll("section.view").forEach(s => s.classList.remove("active"));
+  document.querySelectorAll(".nav-link").forEach(a => a.classList.remove("active"));
+  const v = document.getElementById(id);
+  if (v) v.classList.add("active");
+  const link = document.querySelector(`.nav-link[data-target="${id}"]`);
+  if (link) link.classList.add("active");
+  window.scrollTo(0, 0);
+}
+
+function setupRouting() {
+  document.querySelectorAll(".nav-link").forEach(a => {
+    a.addEventListener("click", e => {
+      e.preventDefault();
+      const tgt = a.dataset.target;
+      location.hash = a.getAttribute("href").substring(1);
+      showView(tgt);
+    });
+  });
+  // Initial route
+  const hash = location.hash.substring(1);
+  if (hash === "dashboard" || !hash) {
+    showView("dashboard");
+  } else {
+    showView("view-" + hash);
+  }
+}
+
+// ===========================================================================
+// Generic table renderer
+// ===========================================================================
+function makeTablePanel(sheetName, opts) {
+  opts = opts || {};
+  const sheet = DATA.sheets[sheetName];
+  const headers = sheet.headers;
+  const allRows = sheet.rows;
+
+  // Build container
+  const container = document.getElementById("view-" + sheetName);
+  container.innerHTML = "";
+
+  const pill = document.createElement("span");
+  pill.className = "section-pill";
+  pill.textContent = "Sheet " + sheetName.split("_")[0];
+  container.appendChild(pill);
+
+  const h2 = document.createElement("h2");
+  h2.textContent = sheet.icon + " " + sheet.label;
+  container.appendChild(h2);
+
+  if (opts.descr) {
+    const p = document.createElement("p");
+    p.className = "descr";
+    p.innerHTML = opts.descr;
+    container.appendChild(p);
+  }
+  if (opts.banner) {
+    const b = document.createElement("div");
+    b.className = "banner";
+    b.innerHTML = opts.banner;
+    container.appendChild(b);
+  }
+
+  // Chart placeholder
+  let chartPanel = null;
+  if (opts.chart) {
+    chartPanel = document.createElement("div");
+    chartPanel.className = "chart-panel";
+    chartPanel.innerHTML = `<h3>${opts.chart.title}</h3><div class="chart-container ${opts.chart.tall ? 'tall' : ''}"><canvas id="canvas-${sheetName}"></canvas></div>`;
+    container.appendChild(chartPanel);
+  }
+
+  // Table panel
+  const panel = document.createElement("div");
+  panel.className = "table-panel";
+
+  // Filters
+  const filterDiv = document.createElement("div");
+  filterDiv.className = "filters";
+
+  const filterState = {};
+  const filterDefs = opts.filters || [];
+
+  // Free-text filter
+  const fTxt = document.createElement("input");
+  fTxt.type = "text";
+  fTxt.placeholder = "Suche…";
+  filterDiv.appendChild(Object.assign(document.createElement("label"), {textContent: "🔎 "}));
+  filterDiv.appendChild(fTxt);
+
+  // Column dropdowns
+  for (const fd of filterDefs) {
+    const lbl = document.createElement("label");
+    lbl.textContent = fd.label + ": ";
+    const sel = document.createElement("select");
+    sel.dataset.col = fd.col;
+    const optAll = document.createElement("option");
+    optAll.value = "__ALL__";
+    optAll.textContent = "Alle";
+    sel.appendChild(optAll);
+    const colIdx = headers.indexOf(fd.col);
+    const vals = [...new Set(allRows.map(r => r[colIdx]).filter(v => v !== null && v !== undefined))].sort();
+    for (const v of vals) {
+      const o = document.createElement("option");
+      o.value = String(v);
+      o.textContent = String(v);
+      sel.appendChild(o);
+    }
+    if (fd.default) sel.value = fd.default;
+    filterDiv.appendChild(lbl);
+    filterDiv.appendChild(sel);
+    filterState[fd.col] = sel;
+  }
+
+  panel.appendChild(filterDiv);
+
+  // Table
+  const wrap = document.createElement("div");
+  wrap.className = "tbl-wrap";
+  const tbl = document.createElement("table");
+  tbl.className = "data";
+  const thead = document.createElement("thead");
+  const trH = document.createElement("tr");
+  headers.forEach((h, i) => {
+    const th = document.createElement("th");
+    th.textContent = h;
+    th.dataset.col = i;
+    trH.appendChild(th);
+  });
+  thead.appendChild(trH);
+  tbl.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  tbl.appendChild(tbody);
+  wrap.appendChild(tbl);
+  panel.appendChild(wrap);
+
+  // Pagination
+  const pagDiv = document.createElement("div");
+  pagDiv.className = "pagination";
+  panel.appendChild(pagDiv);
+
+  container.appendChild(panel);
+
+  // State
+  const state = {
+    sortCol: opts.defaultSortCol !== undefined ? opts.defaultSortCol : -1,
+    sortDir: opts.defaultSortDir || "asc",
+    page: 1,
+    perPage: opts.perPage || 50,
+  };
+
+  // Find einheit-column index for formatting
+  const einheitCol = headers.indexOf("Einheit");
+
+  function getFiltered() {
+    let rows = allRows.slice();
+    // Apply TH FW toggle (only sheets with TH_Code column)
+    const thCol = headers.indexOf("TH_Code");
+    const hideFW = !document.getElementById("th-fw-toggle").checked;
+    if (thCol >= 0 && hideFW) {
+      rows = rows.filter(r => r[thCol] !== "FW");
+    }
+    // Apply column filters
+    for (const [col, sel] of Object.entries(filterState)) {
+      const v = sel.value;
+      if (v !== "__ALL__") {
+        const idx = headers.indexOf(col);
+        rows = rows.filter(r => String(r[idx]) === v);
+      }
+    }
+    // Apply text filter
+    const txt = fTxt.value.toLowerCase().trim();
+    if (txt) {
+      rows = rows.filter(r => r.some(c => c !== null && c !== undefined && String(c).toLowerCase().includes(txt)));
+    }
+    return rows;
+  }
+
+  function sortRows(rows) {
+    if (state.sortCol < 0) return rows;
+    const dir = state.sortDir === "asc" ? 1 : -1;
+    return rows.slice().sort((a, b) => {
+      const av = a[state.sortCol], bv = b[state.sortCol];
+      if (av === null || av === undefined) return 1;
+      if (bv === null || bv === undefined) return -1;
+      if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
+      return String(av).localeCompare(String(bv), "de") * dir;
+    });
+  }
+
+  function render() {
+    let rows = getFiltered();
+    rows = sortRows(rows);
+    const total = rows.length;
+    const totalPages = Math.max(1, Math.ceil(total / state.perPage));
+    if (state.page > totalPages) state.page = totalPages;
+    const start = (state.page - 1) * state.perPage;
+    const pageRows = rows.slice(start, start + state.perPage);
+
+    tbody.innerHTML = "";
+    for (const r of pageRows) {
+      const tr = document.createElement("tr");
+      r.forEach((v, i) => {
+        const td = document.createElement("td");
+        const einheit = einheitCol >= 0 ? r[einheitCol] : null;
+        td.className = cellClass(v, headers[i]);
+        td.textContent = cellRender(v, headers[i], einheit);
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    }
+
+    // Update sort arrows
+    thead.querySelectorAll("th").forEach((th, i) => {
+      const existing = th.querySelector(".arr");
+      if (existing) existing.remove();
+      if (i === state.sortCol) {
+        const a = document.createElement("span");
+        a.className = "arr";
+        a.textContent = state.sortDir === "asc" ? "▲" : "▼";
+        th.appendChild(a);
+      }
+    });
+
+    // Pagination
+    pagDiv.innerHTML = "";
+    const prev = document.createElement("button");
+    prev.textContent = "◀ Zurück";
+    prev.disabled = state.page <= 1;
+    prev.onclick = () => { state.page--; render(); };
+    const next = document.createElement("button");
+    next.textContent = "Weiter ▶";
+    next.disabled = state.page >= totalPages;
+    next.onclick = () => { state.page++; render(); };
+    const info = document.createElement("span");
+    info.className = "info";
+    info.textContent = `Seite ${state.page} / ${totalPages}  ·  ${total} Zeilen${total !== allRows.length ? " (gefiltert)" : ""}`;
+    pagDiv.appendChild(prev);
+    pagDiv.appendChild(info);
+    pagDiv.appendChild(next);
+
+    // Update chart if applicable
+    if (opts.chart && opts.chart.render) {
+      opts.chart.render(rows, "canvas-" + sheetName);
+    }
+  }
+
+  // Wire up sort
+  thead.querySelectorAll("th").forEach((th, i) => {
+    th.addEventListener("click", () => {
+      if (state.sortCol === i) {
+        state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+      } else {
+        state.sortCol = i;
+        state.sortDir = "asc";
+      }
+      render();
+    });
+  });
+
+  // Wire up filters
+  fTxt.addEventListener("input", () => { state.page = 1; render(); });
+  for (const sel of Object.values(filterState)) {
+    sel.addEventListener("change", () => { state.page = 1; render(); });
+  }
+
+  return { render, getFiltered, state, allRows, headers };
+}
+
+// ===========================================================================
+// Sheet 00 README — Key-Value
+// ===========================================================================
+function renderReadme() {
+  const container = document.getElementById("view-00_README");
+  const sheet = DATA.sheets["00_README"];
+  container.innerHTML = "";
+  const pill = document.createElement("span");
+  pill.className = "section-pill"; pill.textContent = "Sheet 00";
+  container.appendChild(pill);
+  const h2 = document.createElement("h2");
+  h2.textContent = sheet.icon + " " + sheet.label;
+  container.appendChild(h2);
+
+  const list = document.createElement("div");
+  list.className = "kv-list";
+  for (const p of sheet.pairs) {
+    const row = document.createElement("div");
+    // Heuristik: Leere Value = Heading
+    if (!p.value || p.value === "None") {
+      row.className = "kv-row heading";
+      const span = document.createElement("span");
+      span.className = "kv-label";
+      span.textContent = p.label;
+      row.appendChild(span);
+    } else {
+      row.className = "kv-row";
+      const lab = document.createElement("span");
+      lab.className = "kv-label";
+      lab.textContent = p.label;
+      const val = document.createElement("span");
+      val.textContent = p.value;
+      row.appendChild(lab);
+      row.appendChild(val);
+    }
+    list.appendChild(row);
+  }
+  container.appendChild(list);
+}
+
+// ===========================================================================
+// Sheet 13 Mapping — Accordion
+// ===========================================================================
+function renderMapping() {
+  const container = document.getElementById("view-13_Mapping_TH_PB");
+  const sheet = DATA.sheets["13_Mapping_TH_PB"];
+  container.innerHTML = "";
+
+  const pill = document.createElement("span");
+  pill.className = "section-pill"; pill.textContent = "Sheet 13";
+  container.appendChild(pill);
+  const h2 = document.createElement("h2");
+  h2.textContent = sheet.icon + " " + sheet.label;
+  container.appendChild(h2);
+  const p = document.createElement("p");
+  p.className = "descr";
+  p.innerHTML = "Zuordnung Teilhaushalte ⇄ Produktbereiche/-gruppen (n:m). Klick auf einen Produktbereich, um seine Produktgruppen aufzuklappen.";
+  container.appendChild(p);
+
+  const headers = sheet.headers;
+  const rows = sheet.rows;
+  const pbIdx = headers.indexOf("PB_Code");
+  const pbNameIdx = headers.indexOf("PB_Bezeichnung");
+  const pgIdx = headers.indexOf("PG_Code");
+  const pgNameIdx = headers.indexOf("PG_Bezeichnung");
+  const thIdx = headers.indexOf("TH_Codes");
+
+  // Group by PB
+  const groups = {};
+  for (const r of rows) {
+    const pb = r[pbIdx];
+    if (!groups[pb]) groups[pb] = { name: r[pbNameIdx], rows: [] };
+    groups[pb].rows.push(r);
+  }
+
+  const wrap = document.createElement("div");
+  for (const pb of Object.keys(groups).sort()) {
+    const g = groups[pb];
+    const item = document.createElement("div");
+    item.className = "accordion-item";
+    const head = document.createElement("div");
+    head.className = "accordion-head";
+    head.innerHTML = `<span><strong>PB ${pb}</strong> · ${g.name}  <span style="color:var(--muted);font-weight:normal">(${g.rows.length} Produktgruppen)</span></span><span class="chevron">▶</span>`;
+    head.addEventListener("click", () => item.classList.toggle("open"));
+    item.appendChild(head);
+
+    const body = document.createElement("div");
+    body.className = "accordion-body";
+    const tbl = document.createElement("table");
+    tbl.className = "data";
+    tbl.innerHTML = `<thead><tr><th style="width:80px">PG</th><th>Bezeichnung</th><th style="width:240px">TH_Codes</th></tr></thead>`;
+    const tbody = document.createElement("tbody");
+    for (const r of g.rows) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${r[pgIdx] || ""}</td><td>${r[pgNameIdx] || ""}</td><td>${r[thIdx] || ""}</td>`;
+      tbody.appendChild(tr);
+    }
+    tbl.appendChild(tbody);
+    body.appendChild(tbl);
+    item.appendChild(body);
+    wrap.appendChild(item);
+  }
+  container.appendChild(wrap);
+}
+
+// ===========================================================================
+// Dashboard charts
+// ===========================================================================
+const charts = {};
+
+function dashCharts() {
+  // 1. Defizit-Trend
+  const eck = DATA.sheets["01_Eckdaten"];
+  const eckH = eck.headers;
+  const jahrI = eckH.indexOf("Jahr");
+  const kennI = eckH.indexOf("Kennzahl");
+  const wertI = eckH.indexOf("Wert");
+  const defizitRows = eck.rows
+    .filter(r => r[kennI] === "Ordentliches Ergebnis")
+    .sort((a, b) => a[jahrI] - b[jahrI]);
+  // Pro Jahr nur 1 Wert: priorisiere Plan, sonst nimm den ersten
+  const byYear = {};
+  for (const r of defizitRows) {
+    const yr = r[jahrI];
+    if (!byYear[yr]) byYear[yr] = r[wertI];
+  }
+  const dYears = Object.keys(byYear).sort();
+  const dVals = dYears.map(y => byYear[y]);
+
+  charts.defizit = new Chart(document.getElementById("chart-defizit"), {
+    type: "line",
+    data: {
+      labels: dYears,
+      datasets: [{
+        label: "Ord. Ergebnis (Mio. €)",
+        data: dVals,
+        borderColor: "#2F5496",
+        backgroundColor: "rgba(47,84,150,0.15)",
+        fill: true,
+        tension: 0.25,
+        pointRadius: 5,
+        pointBackgroundColor: dVals.map(v => v < 0 ? "#C00000" : "#2E7D32"),
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `${ctx.parsed.y.toFixed(1)} Mio. €` } },
+      },
+      scales: {
+        y: { ticks: { callback: v => v + " Mio." } },
+      },
+    },
+  });
+
+  // KPI 2025
+  const v2025 = byYear["2025"];
+  if (v2025 !== undefined) {
+    document.getElementById("kpi-defizit-2025").textContent = v2025.toFixed(1) + " Mio. € (2025)";
+  }
+
+  // 2. Schulden-Trend
+  const sch = DATA.sheets["08_Schulden_Liquiditaet"];
+  const sH = sch.headers;
+  const sJahr = sH.indexOf("Jahr"), sKenn = sH.indexOf("Kennzahl"), sWert = sH.indexOf("Wert");
+  const schRows = sch.rows
+    .filter(r => typeof r[sKenn] === "string" && r[sKenn].startsWith("Schuldenstand"))
+    .sort((a, b) => a[sJahr] - b[sJahr]);
+  const sByYear = {};
+  for (const r of schRows) {
+    const yr = r[sJahr];
+    if (!sByYear[yr]) sByYear[yr] = r[sWert];
+  }
+  const sYears = Object.keys(sByYear).sort();
+  const sVals = sYears.map(y => sByYear[y]);
+
+  charts.schulden = new Chart(document.getElementById("chart-schulden"), {
+    type: "line",
+    data: {
+      labels: sYears,
+      datasets: [{
+        label: "Schuldenstand (Mio. €)",
+        data: sVals,
+        borderColor: "#C00000",
+        backgroundColor: "rgba(192,0,0,0.12)",
+        fill: true, tension: 0.25,
+        pointRadius: 4,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.parsed.y.toFixed(1)} Mio. €` } } },
+      scales: { y: { ticks: { callback: v => v + " Mio." } } },
+    },
+  });
+
+  const v2029 = sByYear["2029"];
+  if (v2029 !== undefined) {
+    document.getElementById("kpi-schulden-2029").textContent = v2029.toFixed(0) + " Mio. € (2029)";
+  }
+
+  // 3. TH-Top-10 Defizit 2025
+  const th = DATA.sheets["02_Teilhaushalte"];
+  const tH = th.headers;
+  const tJahr = tH.indexOf("Jahr"), tCode = tH.indexOf("TH_Code"), tBez = tH.indexOf("TH_Bezeichnung"),
+        tKenn = tH.indexOf("Kennzahl"), tWert = tH.indexOf("Wert");
+  // Heuristik: Kennzahl-Name für ord. Ergebnis kann "Ord_Ergebnis" oder "Ordentliches Ergebnis" sein
+  const ergRows = th.rows.filter(r =>
+    r[tJahr] === 2025 &&
+    r[tCode] !== "FW" &&
+    typeof r[tKenn] === "string" &&
+    (r[tKenn].toLowerCase().includes("ergebnis"))
+  );
+  ergRows.sort((a, b) => a[tWert] - b[tWert]);
+  const top10 = ergRows.slice(0, 10);
+  const lbls = top10.map(r => `${r[tCode]} ${r[tBez]}`);
+  const vals = top10.map(r => r[tWert] / 1_000_000); // EUR → Mio. €
+
+  charts.top10 = new Chart(document.getElementById("chart-th-top10"), {
+    type: "bar",
+    data: {
+      labels: lbls,
+      datasets: [{
+        label: "Defizit 2025 (Mio. €)",
+        data: vals,
+        backgroundColor: "#C00000",
+      }],
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.parsed.x.toFixed(1)} Mio. €` } } },
+      scales: { x: { ticks: { callback: v => v + " Mio." } } },
+    },
+  });
+}
+
+// ===========================================================================
+// Per-sheet chart renderers
+// ===========================================================================
+
+function chartEckdatenLine(rows, canvasId) {
+  // Wenn nur 1 Kennzahl gefiltert: zeige Verlauf
+  const eck = DATA.sheets["01_Eckdaten"];
+  const h = eck.headers;
+  const jI = h.indexOf("Jahr"), kI = h.indexOf("Kennzahl"), wI = h.indexOf("Wert"), eI = h.indexOf("Einheit");
+  const kennSet = [...new Set(rows.map(r => r[kI]))];
+
+  if (charts["eck"]) { charts["eck"].destroy(); }
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+
+  // Gruppiere pro Kennzahl, max 5 Linien
+  const top5 = kennSet.slice(0, 5);
+  const allYears = [...new Set(rows.map(r => r[jI]))].sort();
+  const palette = ["#2F5496","#C00000","#2E7D32","#9333EA","#EA580C"];
+  const datasets = top5.map((k, idx) => {
+    const series = allYears.map(y => {
+      const m = rows.find(r => r[jI] === y && r[kI] === k);
+      return m ? m[wI] : null;
+    });
+    return {
+      label: k,
+      data: series,
+      borderColor: palette[idx % palette.length],
+      backgroundColor: palette[idx % palette.length] + "22",
+      tension: 0.25,
+      spanGaps: true,
+    };
+  });
+
+  charts["eck"] = new Chart(ctx, {
+    type: "line",
+    data: { labels: allYears, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom" } },
+    },
+  });
+}
+
+function chartTeilhBar(rows, canvasId) {
+  const th = DATA.sheets["02_Teilhaushalte"];
+  const h = th.headers;
+  const cI = h.indexOf("TH_Code"), bI = h.indexOf("TH_Bezeichnung"), wI = h.indexOf("Wert");
+
+  if (charts["th"]) { charts["th"].destroy(); }
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+
+  // Sortiert nach Wert ASC
+  const sorted = rows.slice().sort((a, b) => a[wI] - b[wI]);
+  const lbls = sorted.map(r => `${r[cI]} ${r[bI]}`);
+  const vals = sorted.map(r => r[wI] / 1_000_000);
+  const colors = vals.map(v => v < 0 ? "#C00000" : "#2F5496");
+
+  charts["th"] = new Chart(ctx, {
+    type: "bar",
+    data: { labels: lbls, datasets: [{ label: "Wert (Mio. €)", data: vals, backgroundColor: colors }] },
+    options: {
+      indexAxis: "y",
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.parsed.x.toFixed(1)} Mio. €` } } },
+      scales: { x: { ticks: { callback: v => v + " Mio." } } },
+    },
+  });
+}
+
+function chartSchuldenLine(rows, canvasId) {
+  const h = DATA.sheets["08_Schulden_Liquiditaet"].headers;
+  const jI = h.indexOf("Jahr"), kI = h.indexOf("Kennzahl"), wI = h.indexOf("Wert");
+  const schRows = rows.filter(r => typeof r[kI] === "string" && r[kI].toLowerCase().includes("schuldenstand")).sort((a,b)=>a[jI]-b[jI]);
+
+  if (charts["sch"]) { charts["sch"].destroy(); }
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+
+  charts["sch"] = new Chart(ctx, {
+    type: "line",
+    data: { labels: schRows.map(r => r[jI]), datasets: [{ label: "Schuldenstand (Mio. €)", data: schRows.map(r => r[wI]), borderColor: "#C00000", backgroundColor: "rgba(192,0,0,0.12)", fill: true, tension: 0.25 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+  });
+}
+
+// ===========================================================================
+// Bootstrap
+// ===========================================================================
+
+const renderers = {};
+
+function buildAllSheets() {
+  renderReadme();
+
+  renderers["01_Eckdaten"] = makeTablePanel("01_Eckdaten", {
+    descr: "Gesamthaushalt 2017–2029 im Long-Format. Filter setzen, dann zeigt der Chart oben die Zeitreihe.",
+    filters: [
+      { col: "Kennzahl", label: "Kennzahl" },
+      { col: "Plan_Typ", label: "Plan-Typ" },
+    ],
+    chart: { title: "Zeitreihe (gefiltert)", render: chartEckdatenLine },
+    defaultSortCol: 0,
+    defaultSortDir: "asc",
+    perPage: 50,
+  });
+
+  renderers["02_Teilhaushalte"] = makeTablePanel("02_Teilhaushalte", {
+    descr: "41 Teilhaushalte × 7 Kennzahlen × 2 Jahre = 574 Datenpunkte (in EUR). Filter Jahr+Kennzahl setzen für ein TH-Ranking.",
+    filters: [
+      { col: "Jahr", label: "Jahr", default: "2025" },
+      { col: "Kennzahl", label: "Kennzahl", default: "Ord_Ergebnis" },
+    ],
+    chart: { title: "TH-Ranking (gefiltert)", tall: true, render: chartTeilhBar },
+    defaultSortCol: 4,
+    defaultSortDir: "asc",
+    perPage: 50,
+  });
+
+  renderers["08_Schulden_Liquiditaet"] = makeTablePanel("08_Schulden_Liquiditaet", {
+    descr: "Schulden-Trajektorie 2018–2029 + Kennzahlen wie Aufwandsdeckungsgrad.",
+    chart: { title: "Schuldenstand-Verlauf (Mio. €)", render: chartSchuldenLine },
+    defaultSortCol: 0,
+    defaultSortDir: "asc",
+    perPage: 50,
+  });
+
+  renderers["09_Kennzahlen"] = makeTablePanel("09_Kennzahlen", {
+    descr: "Kennzahlen zur finanziellen Leistungsfähigkeit.",
+    banner: "<strong>⚠ Hinweis:</strong> Die Kennzahlentabellen in den PDFs sind um 90° gedreht — automatische Extraktion liefert verstümmelte Werte. Nur teilbefüllt; vollständige Aufnahme manuell erforderlich (Stufe 2).",
+    defaultSortCol: 0,
+    perPage: 50,
+  });
+
+  renderMapping();
+
+  renderers["14_Stammdaten_TH"] = makeTablePanel("14_Stammdaten_TH", {
+    descr: "Stammdaten aller Teilhaushalte mit Bezeichnungen über vier Plan-Generationen. Suche unten findet TH über alle Namensvarianten.",
+    defaultSortCol: 0,
+    perPage: 50,
+  });
+
+  // Initial render
+  for (const r of Object.values(renderers)) r.render();
+}
+
+function setupGlobalToggle() {
+  document.getElementById("th-fw-toggle").addEventListener("change", () => {
+    for (const r of Object.values(renderers)) r.render();
+  });
+}
+
+// ============ Go ============
+buildSidebar();
+setupRouting();
+buildAllSheets();
+dashCharts();
+setupGlobalToggle();
+
+// React to hash changes (back button)
+window.addEventListener("hashchange", () => {
+  const h = location.hash.substring(1);
+  if (h === "" || h === "dashboard") showView("dashboard");
+  else showView("view-" + h);
+});
+</script>
+
+</body>
+</html>

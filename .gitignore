@@ -9,3 +9,5 @@
 # --- Ausnahmen: das, was ins Repo gehört ---
 !.gitignore
 !README.md
+!WebApp/
+!WebApp/**
