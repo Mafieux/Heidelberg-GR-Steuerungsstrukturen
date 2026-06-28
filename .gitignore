@@ -1,0 +1,11 @@
+# Heidelberg-GR-Steuerungsstrukturen — Repo-.gitignore
+# Zweck: Im Ordner C:\Users\D061012\Desktop\HD Haushalt liegen bereits viele
+# Dateien des HD-Haushalt-Projekts. Diese sollen NICHT ins Repo. Es werden nur
+# künftig hinzugefügte, explizit fürs Repo gedachte Dateien getrackt.
+
+# --- Alles standardmäßig ignorieren ---
+/*
+
+# --- Ausnahmen: das, was ins Repo gehört ---
+!.gitignore
+!README.md
