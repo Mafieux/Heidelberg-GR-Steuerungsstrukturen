@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stadt Heidelberg — Haushaltsdaten 2017–2029</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="heatmap-data.js"></script>
 <style>
 :root {
   --sap-blue: #2F5496;
@@ -187,6 +188,62 @@ table.data td.muted { color: var(--muted); font-size: 0.82rem; }
 }
 .banner strong { color: #92400E; }
 
+/* Placeholder panel (new tabs not yet implemented) */
+.placeholder-panel {
+  background: white; border-radius: 8px;
+  padding: 1.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  border-left: 4px solid #94A3B8;
+}
+.placeholder-panel h3 { margin: 0 0 0.5rem; color: var(--muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.placeholder-panel p { margin: 0.6rem 0; }
+.placeholder-panel ul { margin: 0.6rem 0 0; padding-left: 1.2rem; }
+.placeholder-panel li { margin-bottom: 0.3rem; }
+
+/* Heatmap */
+.heatmap-toolbar {
+  display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;
+  background: white; border-radius: 8px;
+  padding: 0.9rem 1.2rem; margin-bottom: 1rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.heatmap-toolbar label { font-size: 0.88rem; color: var(--muted); display: flex; gap: 0.4rem; align-items: center; }
+.heatmap-toolbar select { padding: 0.35rem 0.55rem; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem; background: white; color: var(--text); }
+.heatmap-toolbar select:disabled { background: #F3F4F6; color: var(--muted); cursor: not-allowed; }
+.heatmap-hint { margin-left: auto; font-size: 0.8rem; color: var(--muted); font-style: italic; }
+
+.heatmap-container {
+  background: white; border-radius: 8px;
+  padding: 1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  overflow-x: auto;
+}
+.heatmap-placeholder { padding: 2rem; text-align: center; color: var(--muted); }
+
+table.heatmap { border-collapse: collapse; font-size: 0.78rem; }
+table.heatmap th, table.heatmap td { border: 1px solid #E5E7EB; padding: 0; }
+table.heatmap thead th.th-col { background: var(--sap-blue); color: white; font-weight: 600; padding: 0; text-align: center; min-width: 42px; vertical-align: bottom; height: 165px; }
+table.heatmap thead th.th-col .th-stack { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; padding-bottom: 0.4rem; }
+table.heatmap thead th.th-col .th-code { font-size: 0.75rem; opacity: 0.9; display: block; margin-top: 0.4rem; font-weight: 600; }
+table.heatmap thead th.th-col .th-name { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; padding: 0.3rem 0 0.5rem; font-weight: 600; font-size: 0.82rem; }
+table.heatmap thead th.corner-left { background: var(--sap-blue); color: white; padding: 0.4rem 0.6rem; text-align: left; vertical-align: bottom; }
+table.heatmap thead th.total-col { background: var(--sap-blue-dark); color: white; padding: 0.4rem 0.5rem; min-width: 78px; font-size: 0.78rem; vertical-align: bottom; }
+
+table.heatmap tbody td.pb-label { padding: 0.4rem 0.6rem; font-weight: 600; cursor: pointer; background: #F7F8FA; white-space: nowrap; }
+table.heatmap tbody td.pb-label:hover { background: var(--subheader); }
+table.heatmap tbody td.pb-label .chevron { display: inline-block; transition: transform 0.2s; margin-right: 0.3rem; color: var(--sap-blue); }
+table.heatmap tbody tr.pb-row.open td.pb-label .chevron { transform: rotate(90deg); }
+table.heatmap tbody td.pb-code { padding: 0.4rem 0.4rem; text-align: center; font-weight: 600; background: #F7F8FA; color: var(--sap-blue-dark); }
+table.heatmap tbody td.cell { padding: 0.35rem 0.3rem; text-align: center; font-variant-numeric: tabular-nums; cursor: default; }
+table.heatmap tbody td.cell.empty { background: white; color: transparent; }
+table.heatmap tbody td.row-total { padding: 0.4rem 0.5rem; text-align: right; font-weight: 700; background: #EDF2FA; color: var(--sap-blue-dark); font-variant-numeric: tabular-nums; }
+table.heatmap tbody tr.pg-row { background: #FCFCFD; display: none; }
+table.heatmap tbody tr.pb-row.open + tr.pg-row,
+table.heatmap tbody tr.pg-row.show { display: table-row; }
+table.heatmap tbody tr.pg-row td.pg-label { padding: 0.3rem 0.6rem 0.3rem 1.8rem; font-style: italic; color: var(--text); white-space: nowrap; font-size: 0.74rem; }
+table.heatmap tbody tr.pg-row td.cell { color: #6B7280; font-size: 0.72rem; }
+table.heatmap tbody tr.pg-row td.row-total { background: #F4F6FB; font-weight: 600; font-size: 0.72rem; }
+table.heatmap tbody tr.total-row td { background: var(--sap-blue-dark); color: white; font-weight: 700; padding: 0.4rem 0.4rem; text-align: center; font-variant-numeric: tabular-nums; }
+table.heatmap tbody tr.total-row td.total-label { text-align: left; padding-left: 0.6rem; }
+
 footer.app-footer {
   background: white; padding: 1.5rem 2.5rem;
   border-top: 1px solid var(--border);
@@ -217,6 +274,10 @@ footer.app-footer p { margin: 0.3rem 0; }
 <div class="layout">
   <nav class="sidebar" id="sidebar">
     <a href="#dashboard" class="nav-link active" data-target="dashboard">🏠 Hauptsicht</a>
+    <a href="#heatmap" class="nav-link" data-target="view-heatmap">🔥 Heatmap PB×TH</a>
+    <a href="#kpis" class="nav-link" data-target="view-kpis">📊 KPIs</a>
+    <a href="#positivbeispiele" class="nav-link" data-target="view-positivbeispiele">🏙️ Positivbeispiele</a>
+    <a href="#datenstruktur" class="nav-link" data-target="view-datenstruktur">🧱 Datenstruktur &amp; Lücken</a>
     <div class="nav-section">Sheets</div>
     <!-- nav links injected -->
   </nav>
@@ -259,6 +320,92 @@ footer.app-footer p { margin: 0.3rem 0; }
       <div class="chart-panel">
         <h3>Top-10 Teilhaushalte nach Defizit 2025 (Mio. €) — TH FW ausgeblendet</h3>
         <div class="chart-container tall"><canvas id="chart-th-top10"></canvas></div>
+      </div>
+    </section>
+
+    <!-- Heatmap -->
+    <section class="view" id="view-heatmap">
+      <span class="section-pill">Hauptsicht-Erweiterung</span>
+      <h2>🔥 Heatmap Produktbereich × Teilhaushalt</h2>
+      <p class="descr">Wo gibt die Stadt Geld aus? Matrix zeigt Anteile der ordentlichen Aufwendungen pro Kombination Produktbereich (Zeile) × Teilhaushalt (Spalte). Klick auf eine PB-Zeile öffnet die zugehörigen Produktgruppen.</p>
+
+      <div class="heatmap-toolbar">
+        <label>Jahr:
+          <select id="heatmap-year">
+            <option value="2025" selected>2025</option>
+            <option value="2026" disabled>2026 (kommt)</option>
+            <option value="2024" disabled>2024 (Stufe 2.3)</option>
+            <option value="2023" disabled>2023 (Stufe 2.3)</option>
+          </select>
+        </label>
+        <label>Metrik:
+          <select id="heatmap-metric">
+            <option value="aufwendungen" selected>Ordentliche Aufwendungen</option>
+            <option value="ertraege">Erträge</option>
+            <option value="ord_ergebnis">Ordentliches Ergebnis (Saldo)</option>
+          </select>
+        </label>
+        <label>Anzeige:
+          <select id="heatmap-display">
+            <option value="pct" selected>% am Gesamt</option>
+            <option value="eur">Mio. €</option>
+          </select>
+        </label>
+        <span class="heatmap-hint">Tipp: Auf eine PB-Bezeichnung klicken, um die Produktgruppen zu sehen.</span>
+      </div>
+
+      <div id="heatmap-container" class="heatmap-container">
+        <div class="heatmap-placeholder">Heatmap wird geladen…</div>
+      </div>
+    </section>
+
+    <!-- KPIs (Placeholder) -->
+    <section class="view" id="view-kpis">
+      <span class="section-pill">Neu</span>
+      <h2>📊 KPIs</h2>
+      <p class="descr">Kennzahlen-Dashboard für Steuerung und Außenkommunikation.</p>
+      <div class="placeholder-panel">
+        <h3>Platzhalter</h3>
+        <p>Dieser Bereich wird in einer späteren Iteration befüllt. Geplante Inhalte:</p>
+        <ul>
+          <li>Strukturelle Kennzahlen aus Sheet 09 (Aufwandsdeckungsgrad, Eigenkapitalquote, Zinslastquote, Verschuldung pro Einwohner)</li>
+          <li>Jahresreihen 2023–2029 mit Ampel-Bewertung gegen Schwellenwerte</li>
+          <li>Vergleich gegen Benchmark-Städte (Sheet 11, sobald gefüllt)</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Positivbeispiele (Placeholder) -->
+    <section class="view" id="view-positivbeispiele">
+      <span class="section-pill">Neu</span>
+      <h2>🏙️ Positivbeispiele anderer Städte</h2>
+      <p class="descr">Best-Practice-Beispiele für Leistungsmessung, interne Steuerung und Bürger-Transparenz.</p>
+      <div class="placeholder-panel">
+        <h3>Platzhalter</h3>
+        <p>Aktiver Recherche-Auftrag läuft. Ergebnisse werden hier integriert. Geplante Struktur:</p>
+        <ul>
+          <li>6–8 Profile (DE, EU, EN-Raum, Estland/nordisch) mit Screenshots</li>
+          <li>Bewertungsmatrix gegen 6 Kriterien K1–K6</li>
+          <li>Verlinkung mit Briefings/Termin_01_Positivbeispiele.md und Excel-Sheet 11_Vergleichsstaedte</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Datenstruktur & Lücken (Placeholder) -->
+    <section class="view" id="view-datenstruktur">
+      <span class="section-pill">Neu</span>
+      <h2>🧱 Datenstruktur &amp; Lücken</h2>
+      <p class="descr">Wie der Haushalt aufgebaut ist und was die Datenextraktion bislang nicht abdeckt.</p>
+      <div class="placeholder-panel">
+        <h3>Platzhalter</h3>
+        <p>Dieser Bereich wird das Datenmodell und die offenen Lücken aus den Stufen 1–3 dokumentieren. Geplante Inhalte:</p>
+        <ul>
+          <li>Hierarchie: Gesamthaushalt → Teilhaushalt → Produktbereich → Produktgruppe → Produkt</li>
+          <li>Ergebnis- vs. Finanzhaushalt (Doppik-Erklärung in Bürgersprache)</li>
+          <li>Übersicht der 6 Quellen-PDFs Q1–Q5</li>
+          <li>Transparenzlücken-Liste aus Daten/03_Transparenzluecken.md</li>
+          <li>Stufen-Status: was extrahiert ist, was offen ist, warum</li>
+        </ul>
       </div>
     </section>
 
@@ -995,12 +1142,268 @@ function setupGlobalToggle() {
   });
 }
 
+// ===========================================================================
+// Heatmap PB × TH
+// ===========================================================================
+function setupHeatmap() {
+  if (typeof window.HEATMAP_DATA === "undefined") {
+    document.getElementById("heatmap-container").innerHTML =
+      '<div class="heatmap-placeholder">⚠️ heatmap-data.js nicht geladen.</div>';
+    return;
+  }
+
+  // PB-Bezeichnungen aus Sheet 13 (Mapping)
+  const pbBezMap = {};
+  const sheet13 = DATA.sheets["13_Mapping_TH_PB"];
+  if (sheet13 && sheet13.rows) {
+    // Try both naming conventions (PB / PB_Bez and PB_Code / PB_Bezeichnung)
+    const pbIdx = sheet13.headers.indexOf("PB_Code") !== -1
+      ? sheet13.headers.indexOf("PB_Code")
+      : sheet13.headers.indexOf("PB");
+    const pbBezIdx = sheet13.headers.indexOf("PB_Bezeichnung") !== -1
+      ? sheet13.headers.indexOf("PB_Bezeichnung")
+      : sheet13.headers.indexOf("PB_Bez");
+    if (pbIdx >= 0 && pbBezIdx >= 0) {
+      for (const row of sheet13.rows) {
+        const pb = String(row[pbIdx]);
+        const bez = row[pbBezIdx];
+        if (pb && bez && !pbBezMap[pb]) pbBezMap[pb] = bez;
+      }
+    }
+  }
+
+  const yearSel = document.getElementById("heatmap-year");
+  const metricSel = document.getElementById("heatmap-metric");
+  const displaySel = document.getElementById("heatmap-display");
+
+  function render() {
+    const year = parseInt(yearSel.value, 10);
+    const metric = metricSel.value;        // aufwendungen | ertraege | ord_ergebnis
+    const display = displaySel.value;       // pct | eur
+
+    // Filter by year, aggregate to PB×TH and PG×TH
+    const pbTh = {};            // pbTh[pb][th] = value
+    const pgTh = {};            // pgTh[pg_code][th] = value
+    const pgBez = {};
+    const pbList = new Set();
+    const thList = new Set();
+    const thBezMap = {};
+    const pgByPb = {};          // pgByPb[pb] = Set(pg_code)
+
+    for (const r of window.HEATMAP_DATA) {
+      if (r.jahr !== year) continue;
+      const v = r[metric] || 0;
+      const pb = r.pg_code.includes(".") ? r.pg_code.split(".")[0] : r.pg_code.substring(0, 2);
+      const th = r.th_code;
+      pbList.add(pb);
+      thList.add(th);
+      thBezMap[th] = r.th_bez;
+      pgBez[r.pg_code] = r.pg_bez;
+      if (!pbTh[pb]) pbTh[pb] = {};
+      pbTh[pb][th] = (pbTh[pb][th] || 0) + v;
+      if (!pgTh[r.pg_code]) pgTh[r.pg_code] = {};
+      pgTh[r.pg_code][th] = (pgTh[r.pg_code][th] || 0) + v;
+      if (!pgByPb[pb]) pgByPb[pb] = new Set();
+      pgByPb[pb].add(r.pg_code);
+    }
+
+    // Row totals (PB) + column totals (TH) + grand total
+    const rowTot = {}, colTot = {};
+    let grand = 0;
+    for (const pb of pbList) {
+      rowTot[pb] = 0;
+      for (const th of Object.keys(pbTh[pb] || {})) {
+        rowTot[pb] += pbTh[pb][th];
+        colTot[th] = (colTot[th] || 0) + pbTh[pb][th];
+        grand += pbTh[pb][th];
+      }
+    }
+
+    // Sort PBs by |rowTot| desc, THs by |colTot| desc
+    const pbs = [...pbList].sort((a, b) => Math.abs(rowTot[b]) - Math.abs(rowTot[a]));
+    const ths = [...thList].sort((a, b) => Math.abs(colTot[b]) - Math.abs(colTot[a]));
+
+    // Color scale max (absolute value among displayed cells)
+    let maxAbs = 0;
+    for (const pb of pbs) for (const th of ths) {
+      const v = (pbTh[pb] && pbTh[pb][th]) || 0;
+      if (Math.abs(v) > maxAbs) maxAbs = Math.abs(v);
+    }
+    if (maxAbs === 0) maxAbs = 1;
+
+    const signedMetric = (metric === "ord_ergebnis");
+
+    function fmtCell(v) {
+      if (v === 0 || v == null) return "";
+      if (display === "pct") {
+        const denom = signedMetric ? maxAbs : Math.abs(grand);
+        if (denom === 0) return "";
+        const p = (v / denom) * 100;
+        if (Math.abs(p) < 0.05) return "";
+        return (signedMetric ? (p >= 0 ? "+" : "") : "") + p.toFixed(1) + "%";
+      } else {
+        const m = v / 1e6;
+        if (Math.abs(m) < 0.05) return "";
+        return (signedMetric && m > 0 ? "+" : "") + m.toFixed(1);
+      }
+    }
+
+    function colorFor(v) {
+      if (!v) return "white";
+      const t = Math.min(Math.abs(v) / maxAbs, 1);
+      if (signedMetric) {
+        // Saldo: green positive, red negative
+        if (v > 0) {
+          // light -> dark green
+          const lightness = 95 - t * 45;
+          return `hsl(135, 55%, ${lightness}%)`;
+        } else {
+          const lightness = 95 - t * 45;
+          return `hsl(0, 65%, ${lightness}%)`;
+        }
+      }
+      // Unsigned (Aufwand, Ertrag): white -> orange -> deep red
+      // 0..0.2 white->yellow, 0.2..0.6 yellow->orange, 0.6..1 orange->red
+      const lightness = 96 - t * 50;
+      const hue = 38 - t * 38;  // 38 yellow-orange -> 0 red
+      return `hsl(${hue}, 80%, ${lightness}%)`;
+    }
+
+    function textColorFor(v) {
+      if (!v) return "var(--muted)";
+      const t = Math.min(Math.abs(v) / maxAbs, 1);
+      return t > 0.55 ? "white" : "var(--text)";
+    }
+
+    // Build table
+    const container = document.getElementById("heatmap-container");
+    let html = '<table class="heatmap"><thead><tr>';
+    html += '<th class="corner-left" colspan="2">Produktbereich</th>';
+    for (const th of ths) {
+      const bez = thBezMap[th] || "—";
+      html += `<th class="th-col"><div class="th-stack"><span class="th-name">${escapeHtml(bez)}</span><span class="th-code">TH ${th}</span></div></th>`;
+    }
+    const totalLabel = (display === "pct")
+      ? (signedMetric ? "Σ (Mio. €)" : "PB-Σ %")
+      : "PB-Σ (Mio. €)";
+    html += `<th class="total-col">${totalLabel}</th>`;
+    html += '</tr></thead><tbody>';
+
+    for (const pb of pbs) {
+      const bez = pbBezMap[pb] || "—";
+      const numPg = pgByPb[pb] ? pgByPb[pb].size : 0;
+      const hasPg = numPg > 0;
+      const chev = hasPg ? '<span class="chevron">▶</span>' : '<span class="chevron" style="opacity:0.2">·</span>';
+      html += `<tr class="pb-row" data-pb="${pb}">`;
+      html += `<td class="pb-code">${escapeHtml(pb)}</td>`;
+      html += `<td class="pb-label">${chev}${escapeHtml(bez)}${hasPg ? ` <span style="color:var(--muted);font-weight:400;font-size:0.7rem">(${numPg} PG)</span>` : ""}</td>`;
+      for (const th of ths) {
+        const v = (pbTh[pb] && pbTh[pb][th]) || 0;
+        const txt = fmtCell(v);
+        const bg = colorFor(v);
+        const col = textColorFor(v);
+        const tooltip = v ? `${bez} × TH ${th} ${thBezMap[th] || ""}\n${(v/1e6).toFixed(2)} Mio. €` : "";
+        html += `<td class="cell${v ? "" : " empty"}" style="background:${bg};color:${col}" title="${escapeHtml(tooltip)}">${txt}</td>`;
+      }
+      // Row total
+      const rt = rowTot[pb];
+      let rtText;
+      if (display === "pct") {
+        if (signedMetric) {
+          rtText = (rt/1e6).toFixed(1);
+        } else {
+          rtText = grand ? ((rt / grand) * 100).toFixed(1) + "%" : "—";
+        }
+      } else {
+        rtText = (rt/1e6).toFixed(1);
+      }
+      html += `<td class="row-total">${rtText}</td>`;
+      html += '</tr>';
+
+      // Insert hidden PG rows
+      if (hasPg) {
+        const pgCodes = [...pgByPb[pb]].sort((a, b) => {
+          const sa = Object.values(pgTh[a] || {}).reduce((s, x) => s + Math.abs(x), 0);
+          const sb = Object.values(pgTh[b] || {}).reduce((s, x) => s + Math.abs(x), 0);
+          return sb - sa;
+        });
+        for (const pg of pgCodes) {
+          let rowSum = 0;
+          html += `<tr class="pg-row" data-parent="${pb}">`;
+          html += '<td class="pb-code" style="background:#FCFCFD"></td>';
+          html += `<td class="pg-label">↳ ${escapeHtml(pg)} ${escapeHtml(pgBez[pg] || "")}</td>`;
+          for (const th of ths) {
+            const v = (pgTh[pg] && pgTh[pg][th]) || 0;
+            rowSum += v;
+            const txt = fmtCell(v);
+            const bg = colorFor(v);
+            const col = textColorFor(v);
+            const tooltip = v ? `${pg} ${pgBez[pg]||""} × TH ${th}\n${(v/1e6).toFixed(2)} Mio. €` : "";
+            html += `<td class="cell${v ? "" : " empty"}" style="background:${bg};color:${col}" title="${escapeHtml(tooltip)}">${txt}</td>`;
+          }
+          let pgRtText;
+          if (display === "pct") {
+            if (signedMetric) pgRtText = (rowSum/1e6).toFixed(1);
+            else pgRtText = grand ? ((rowSum / grand) * 100).toFixed(1) + "%" : "—";
+          } else {
+            pgRtText = (rowSum/1e6).toFixed(1);
+          }
+          html += `<td class="row-total">${pgRtText}</td>`;
+          html += '</tr>';
+        }
+      }
+    }
+
+    // Footer total row
+    html += '<tr class="total-row">';
+    html += '<td class="total-label" colspan="2">TH-Summe</td>';
+    for (const th of ths) {
+      const v = colTot[th] || 0;
+      let t;
+      if (display === "pct") {
+        if (signedMetric) t = (v/1e6).toFixed(1);
+        else t = grand ? ((v / grand) * 100).toFixed(1) + "%" : "—";
+      } else {
+        t = (v/1e6).toFixed(1);
+      }
+      html += `<td>${t}</td>`;
+    }
+    const grandText = display === "pct" ? (signedMetric ? (grand/1e6).toFixed(1) + " Mio." : "100,0 %") : (grand/1e6).toFixed(1);
+    html += `<td>${grandText}</td>`;
+    html += '</tr>';
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+
+    // Wire up click handlers for PB rows
+    container.querySelectorAll("tr.pb-row").forEach(tr => {
+      tr.querySelector("td.pb-label").addEventListener("click", () => {
+        const pb = tr.dataset.pb;
+        const isOpen = tr.classList.toggle("open");
+        container.querySelectorAll(`tr.pg-row[data-parent="${pb}"]`).forEach(pgr => {
+          pgr.classList.toggle("show", isOpen);
+        });
+      });
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+
+  yearSel.addEventListener("change", render);
+  metricSel.addEventListener("change", render);
+  displaySel.addEventListener("change", render);
+  render();
+}
+
 // ============ Go ============
 buildSidebar();
 setupRouting();
 buildAllSheets();
 dashCharts();
 setupGlobalToggle();
+setupHeatmap();
 
 // React to hash changes (back button)
 window.addEventListener("hashchange", () => {
