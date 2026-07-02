@@ -11,3 +11,8 @@
 !README.md
 !WebApp/
 !WebApp/**
+
+# --- WebApp-Ausschlüsse (nicht ins öffentliche Repo) ---
+WebApp/index.plain.html
+WebApp/design-mockups/
+WebApp/.staticrypt.json
