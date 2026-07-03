@@ -38,6 +38,7 @@ header.app-header h1 { margin: 0; font-size: 1.1rem; font-weight: 600; }
 header.app-header .meta { font-size: 0.85rem; opacity: 0.9; display: flex; gap: 1.5rem; align-items: center; }
 header.app-header label { cursor: pointer; user-select: none; }
 header.app-header input[type=checkbox] { margin-right: 0.3rem; vertical-align: middle; }
+header.app-header .disclaimer { color: white; font-style: italic; font-size: 0.9rem; opacity: 1; letter-spacing: 0.01em; }
 
 .layout { display: flex; min-height: calc(100vh - 50px); }
 
@@ -1226,6 +1227,7 @@ footer.app-footer p { margin: 0.3rem 0; }
 <header class="app-header">
   <h1><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:9px;"><path d="M3 21V7l6-3 6 3v14"/><path d="M9 21V11h6v10"/><path d="M3 21h18"/></svg>Stadt Heidelberg — Haushaltsdaten 2017–2029</h1>
   <div class="meta">
+    <span class="disclaimer">⚠️ <em>Illustrativ / einzelne Datenpunkte zeigen noch Inkonsistenzen</em></span>
     <span>Stand: <strong id="generated-date">__GEN__</strong></span>
   </div>
 </header>
